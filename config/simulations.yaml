@@ -1,0 +1,35 @@
+simulations:
+  - name: "Simulation 1"
+    description: "First simulation"
+    learner:
+      name: "RidgeRegression"
+      uses_plm: true
+      parameters:
+        input_dim: 128
+        alpha: 1.0
+        num_estimators: 10
+        random_state: 42
+    acquisition_strategies:
+      - name: "Random"
+        parameters: {}
+      - name: "Bald"
+        parameters: {}
+  - name: "Simulation 2"
+    description: "Second simulation"
+    learner:
+      name: "MLPRegression"
+      uses_plm: true
+      parameters:
+        input_dim: 128
+        alpha: 0.0001
+        hidden_layer_sizes: [64, 32]
+        learning_rate_init: 0.001
+        max_iter: 200
+        num_dropout_samples: 10
+        random_state: 42
+  - name: "Simulation 2"
+    description: "Second simulation"
+    config_path: "./config/simulations/sim2.yaml"
+  - name: "Simulation 3"
+    description: "Third simulation"
+    config_path: "./config/simulations/sim3.yaml"
