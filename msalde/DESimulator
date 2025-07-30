@@ -1,0 +1,236 @@
+from typing import Tuple
+
+from .repository import RunRepository
+
+from .plm import PLMModel
+from .data_loader import VariantDataLoader
+from .model import AssayResult, SubRunParameters, Variant
+
+
+class DESimulator:
+    def __init__(
+        self,
+        config,
+        data_loader: VariantDataLoader,
+        run_repository: RunRepository,
+        plm_model: PLMModel,
+        acquisition_strategy_factory,
+    ):
+        self._config = config
+        self._data_loader = data_loader
+        self._run_repository = run_repository
+        self._acquisition_strategy_factory = acquisition_strategy_factory
+        self._plm_model = plm_model
+
+    def _load_assay_data(self) -> Tuple[list[Variant], list[AssayResult]]:
+        return self._data_loader.load(self)
+
+    def _split_assay_data(
+        self,
+        assay_variants: list[Variant],
+        assay_results: list[AssayResult],
+        test_fraction: float,
+        random_seed: int,
+    ) -> Tuple[
+        list[Variant], list[AssayResult], list[Variant], list[AssayResult]
+    ]:
+        """
+        Splits assay data into simulation and test sets.
+
+        Returns:
+            simulation_variants, simulation_assay_results, test_variants, test_assay_results
+        """
+        import random
+
+        # Ensure reproducibility
+        rng = random.Random(random_seed)
+        indices = list(range(len(assay_variants)))
+        rng.shuffle(indices)
+
+        split_idx = int(len(indices) * (1 - test_fraction))
+        sim_indices = indices[:split_idx]
+        test_indices = indices[split_idx:]
+
+        simulation_variants = [assay_variants[i] for i in sim_indices]
+        simulation_assay_results = [assay_results[i] for i in sim_indices]
+        test_variants = [assay_variants[i] for i in test_indices]
+        test_assay_results = [assay_results[i] for i in test_indices]
+
+        return (
+            simulation_variants,
+            simulation_assay_results,
+            test_variants,
+            test_assay_results,
+        )
+
+    def _get_max_assay_score(self, assay_results: list[AssayResult]) -> float:
+        """
+        Returns the maximum assay score from a list of AssayResult objects.
+        """
+        return max(result.score for result in assay_results)
+
+    def _create_run(
+        self,
+        num_rounds: int,
+        num_selected_variants_first_round: int,
+        num_selected_variants_per_round: int,
+        batch_size: int,
+        test_fraction: float,
+        random_seed: int,
+    ) -> int:
+        """
+        Creates a new run record in the repository and returns its run_id.
+        """
+        run = self._run_repository.add(
+            num_rounds=num_rounds,
+            num_selected_variants_first_round=
+            num_selected_variants_first_round,
+            num_selected_variants_per_round=num_selected_variants_per_round,
+            batch_size=batch_size,
+            test_fraction=test_fraction,
+            random_seed=random_seed,
+        )
+        return run.id
+
+    def run_simulation(
+        self,
+        run_configuration: str,
+        num_rounds: int = 5,
+        num_selected_variants_first_round: int = 10,
+        num_selected_variants_per_round: int = 10,
+        batch_size: int = 10,
+        test_fraction: float = 0.2,
+        random_seed: int = 42,
+    ):
+
+        assay_variants, assay_results = self._load_assay_data()
+        (
+            simulation_variants,
+            simulation_assay_results,
+            test_variants,
+            test_assay_results,
+        ) = self._split_assay_data(
+            assay_variants, assay_results, test_fraction, random_seed
+        )
+        remaining_variants = simulation_variants.copy()
+        max_assay_score = self._get_max_assay_score(simulation_assay_results)
+        run_id = self._create_run(
+            num_rounds,
+            num_selected_variants_first_round,
+            num_selected_variants_per_round,
+            batch_size,
+            test_fraction,
+            random_seed,
+        )
+        sub_runs = self._compile_sub_runs(run_configuration)
+
+        for sub_run_params in sub_runs:
+            sub_run_id = self._create_sub_run(run_id, sub_run_params)
+            train_variants = []
+            train_assay_results = []
+            for round in range(1, num_rounds + 1):
+                if len(remaining_variants) == 0:
+                    raise Exception(
+                        "No more variants to select. " + "Could not complete round"
+                    )
+                round_id = self._create_round(sub_run_id, round)
+                if round == 1:
+                    current_round_variants = self._random_sample_variants(
+                        num_selected_variants_first_round, remaining_variants
+                    )
+                    current_round_assay_results = self._get_assay_results_for_variants(
+                        current_round_variants, simulation_assay_results
+                    )
+                    current_round_acquisition_scores = (
+                        self._convert_assay_results_to_acquisition_scores(
+                            current_round_assay_results
+                        )
+                    )
+                else:
+                    predictions = self._make_predictions(
+                        sub_run_params.model, remaining_variants
+                    )
+                    acquisition_scores = self._compute_acquisition_scores(
+                        sub_run_params.acquisition_strategy, predictions
+                    )
+                    current_round_variants, current_round_acquisition_scores = (
+                        self._select_top_variants(
+                            acquisition_scores, num_selected_variants_per_round
+                        )
+                    )
+                    current_round_assay_results = self._get_assay_results_for_variants(
+                        current_round_variants, simulation_assay_results
+                    )
+
+                best_variant = self._get_best_variant(current_round_assay_results)
+                self._save_proposed_variants(
+                    round_id,
+                    round,
+                    current_round_variants,
+                    current_round_assay_results,
+                    current_round_acquisition_scores,
+                    best_variant,
+                    max_assay_score,
+                )
+                train_variants.append(current_round_variants)
+                train_assay_results.append(current_round_assay_results)
+                remaining_variants = self._subtract_variant_lists(
+                    remaining_variants, current_round_variants
+                )
+                self._fit_model(train_variants, train_assay_results)
+                test_predictions = self._make_variant_predictions(test_variants)
+                test_performance_metrics = self._compute_preformance_metrics(
+                    test_predictions, test_assay_results
+                )
+                self._end_round(round_id, test_performance_metrics)
+            self._end_sub_run(sub_run_id)
+        self._end_run(run_id)
+
+    def _compile_sub_runs(self, run_config) -> list[SubRunParameters]:
+        """
+        """
+        sub_runs = []
+        for simulation in run_config.simulations:
+            learner_factory = self._learner_factories.get_factory(
+                simulation.learner.name
+            )
+            if simulation.learner.uses_plm:
+                learner = learner_factory.create_instance(
+                    plm_model=self._plm_model, **simulation.learner.parameters
+                )
+            else:
+                learner = learner_factory.create_instance(
+                    **simulation.learner.parameters
+                )
+            for acquisition_strategy in simulation.acquisition_strategies:
+                acquisition_strategy_factory = (
+                    self._acquisition_strategy_factories.get_factory(
+                        acquisition_strategy.name
+                    )
+                )
+                acquisition_strategy = \
+                    acquisition_strategy_factory.create_instance(
+                        **acquisition_strategy.parameters
+                    )
+                sub_run_params = SubRunParameters(
+                    learner_name=simulation.learner.name,
+                    learner_parameters=simulation.learner.parameters,
+                    acquisition_strategy_name=acquisition_strategy.name,
+                    acquisition_strategy_parameters=acquisition_strategy.parameters,
+                    learner=learner,
+                    acquisition_strategy=acquisition_strategy,
+                )
+                sub_runs.append(sub_run_params)
+
+        return sub_runs
+
+    def _initialize(self):
+        self._load_simulation_data()
+        self.current_time = self.initial_time
+        self.events = []
+        self.entities = []
+        self.resources = []
+        self.statistics = {}
+        self.status = "stopped"
+        self.log = []
+        self.random_seed = None
