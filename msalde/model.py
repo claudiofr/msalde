@@ -22,8 +22,10 @@ class Variant:
     id: Union[int, str]
     name: str
     sequence: str
+    embedding: Optional[np.ndarray]
 
 
+@dataclass
 class AssayResult:
     """Experimental assay result."""
 
@@ -31,6 +33,34 @@ class AssayResult:
     score: float
     uncertainty: Optional[float]
     assay_id: str
+
+
+@dataclass
+class ModelPrediction:
+    """Experimental assay result."""
+
+    variant_id: Union[int, str]
+    score: float
+    uncertainty: Optional[float] = None
+
+
+@dataclass
+class AcquisitionScore:
+    """Experimental assay result."""
+
+    variant_id: Union[int, str]
+    score: float
+
+
+@dataclass
+class SelectedVariant:
+    """Experimental assay result."""
+
+    variant: Variant
+    prediction: Optional[ModelPrediction] = None
+    acquisition_score: Optional[AcquisitionScore] = None
+    top_prediction: bool = False
+    top_acquisition_score: bool = False
 
 
 class ProposedVariant(BaseModel):

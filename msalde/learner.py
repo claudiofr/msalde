@@ -2,6 +2,8 @@ import numpy as np
 from sklearn.decomposition import PCA
 from typing import Optional, Tuple
 
+from .model import ModelPrediction
+
 
 class Learner:
     """Base class for learners."""
@@ -81,8 +83,8 @@ class Learner:
         raise NotImplementedError("Subclasses must implement fit method")
 
     def predict(
-        self, sequences: np.ndarray
-    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        self, variants: list[Variants]
+    ) -> list[ModelPrediction]:
         """
         Predict scores and uncertainties.
 
