@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine
-from .dbmodel import Base
+from .dbmodel import ALDESubRun, Base
 from .dbmodel import ALDERun
 
 class RepoSessionContext:
@@ -19,12 +19,12 @@ class RepoSessionContext:
         Base.metadata.create_all(self._engine)
 
 
-class RunRepository:
+class ALDERepository:
 
     def __init__(self, session_context: RepoSessionContext):
         self._engine = session_context.engine
 
-    def add(
+    def add_run(
         self,
         num_rounds,
         num_selected_variants_first_round,
@@ -52,9 +52,39 @@ class RunRepository:
             session.flush()
             return run
 
-    def end_run(self, run_id, end_ts):
+    def end_run(self, id, end_ts):
         with self._engine.begin() as session:
-            run = session.query(ALDERun).get(run_id)
+            run = session.query(ALDERun).get(id)
             run.end_ts = end_ts
             session.flush()
             return run.id
+
+    def add_sub_run(
+        self,
+        run_id,
+        learner_name,
+        learner_parameters,
+        acquisition_strategy_name,
+        acquisition_strategy_parameters,
+        start_ts,
+    ):
+        with self._engine.begin() as session:
+            sub_run = ALDESubRun(
+                model_name=learner_name,
+                model_parameters=learner_parameters,
+                strategy=acquisition_strategy_name,
+                strategy_parameters=acquisition_strategy_parameters,
+                run_id=run_id,
+                start_ts=start_ts,
+            )
+            session.add(sub_run)
+            session.flush()
+            return sub_run
+
+    def end_sub_run(self, id, end_ts):
+        with self._engine.begin() as session:
+            sub_run = session.query(ALDESubRun).get(id)
+            sub_run.end_ts = end_ts
+            session.flush()
+            return sub_run.id
+

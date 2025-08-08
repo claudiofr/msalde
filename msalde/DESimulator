@@ -1,10 +1,18 @@
+from datetime import datetime
 from typing import Tuple
+
+from .strategy import AcquisitionStrategy
+
+from .learner import Learner
 
 from .repository import RunRepository
 
 from .plm import PLMModel
 from .data_loader import VariantDataLoader
-from .model import AssayResult, SubRunParameters, Variant
+from .model import (
+    AcquisitionScore, AssayResult, SelectedVariant, SubRunParameters, Variant,
+    ModelPrediction
+)
 
 
 class DESimulator:
@@ -12,13 +20,13 @@ class DESimulator:
         self,
         config,
         data_loader: VariantDataLoader,
-        run_repository: RunRepository,
+        repository: ALDERepository,
         plm_model: PLMModel,
         acquisition_strategy_factory,
     ):
         self._config = config
         self._data_loader = data_loader
-        self._run_repository = run_repository
+        self._repository = repository
         self._acquisition_strategy_factory = acquisition_strategy_factory
         self._plm_model = plm_model
 
@@ -81,7 +89,7 @@ class DESimulator:
         """
         Creates a new run record in the repository and returns its run_id.
         """
-        run = self._run_repository.add(
+        run = self._repository.add_run(
             num_rounds=num_rounds,
             num_selected_variants_first_round=
             num_selected_variants_first_round,
@@ -92,18 +100,250 @@ class DESimulator:
         )
         return run.id
 
+    def _create_sub_run(self, run_id: int, sub_run_params: SubRunParameters) \
+            -> int:
+        """
+        Creates a new sub-run record in the repository and returns its sub_run_id.
+        """
+        sub_run = self._repository.add_sub_run(
+            run_id=run_id,
+            learner_name=sub_run_params.learner_name,
+            learner_parameters=sub_run_params.learner_parameters,
+            acquisition_strategy_name=sub_run_params.acquisition_strategy_name,
+            acquisition_strategy_parameters=
+            sub_run_params.acquisition_strategy_parameters,
+            start_ts=datetime.datetime.now(),
+        )
+        return sub_run.id
+
+    def _create_round(self, sub_run_id: int, round_num: int) -> int:
+        """
+        Creates a new round record in the repository and returns its round_id.
+        """
+        from datetime import datetime
+        round = self._repository.add_round(
+            sub_run_id=sub_run_id,
+            round_num=round_num,
+            start_ts=datetime.now(),
+            end_ts=None,
+        )
+        return round.id
+
+    def _end_round(self, round_id: int, performance_metrics: dict):
+        """
+        Ends a round by updating its performance metrics in the repository.
+        """
+        self._repository.end_round(round_id, performance_metrics)
+
+    def _end_sub_run(self, sub_run_id: int):
+        """
+        Ends a sub-run by updating its end timestamp in the repository.
+        """
+        self._repository.end_sub_run(sub_run_id, datetime.datetime.now())
+
+    def _end_run(self, run_id: int):
+        """
+        Ends a run by updating its end timestamp in the repository.
+        """
+        self._repository.end_run(run_id, datetime.datetime.now())
+
+    def _random_sample_variants(self, num_to_select: int,
+                                variants: list[Variant]) -> list[Variant]:
+        """
+        Randomly samples a specified number of variants from the given list.
+        """
+        import random
+        if num_to_select > len(variants):
+            raise ValueError("Requested more variants than available.")
+        return random.sample(variants,
+                             num_to_select)
+
+    def _get_assay_results_for_variants(
+        self, variants: list[Variant], assay_results: list[AssayResult]
+    ) -> list[AssayResult]:
+        """
+        Returns a list of AssayResult objects corresponding to the given variants.
+        Matching the order of the variants in variants.
+        """
+        assay_results = [assay_result for variant in variants
+                         for assay_result in assay_results if
+                         assay_result.variant_id == variant.id]
+        return assay_results
+
+    def _convert_assay_results_to_acquisition_scores(
+        self, assay_results: list[AssayResult]
+    ) -> list[AcquisitionScore]:
+        """
+        Converts a list of AssayResult objects to acquisition scores.
+        By default, uses the assay score as the acquisition score.
+        """
+        return [AcquisitionScore(variant_id=result.variant_id, score=result.score)
+                for result in assay_results]
+
+    def _make_predictions(self, learner: Learner, variants: list[Variant]
+                          ) -> list[ModelPrediction]:
+        """
+        Uses the provided learner to make predictions for the given variants.
+
+        Args:
+            learner: The trained learner/model with a predict method.
+            variants: List of Variant objects to predict on.
+
+        Returns:
+            List of predicted values (floats), one for each variant.
+        """
+        # Assume each Variant has a method or property to get its features as a numpy array
+
+        return learner.predict(variants)
+
+    def _embed_variants(self, variants: list[Variant]) -> list[Variant]:
+        """
+        Uses the PLM model to embed the given variants and returns the updated list.
+        Assumes self._plm_model has an 'embed' method that takes a list of Variant and returns a list of Variant with embeddings.
+        """
+        if self._plm_model is None:
+            return variants
+        return self._plm_model.embed_variants(variants)
+        
+    def _select_top_variants(
+        self,
+        acquisition_strategy: AcquisitionStrategy,
+        variants: list[Variant],
+        predictions: list[ModelPrediction],
+        num_top_acquisition_variants: int,
+        num_top_prediction_variants: int,
+
+    ) -> Tuple[list[Variant], list[ModelPrediction], list[AcquisitionScore]]:
+        """
+        Computes acquisition scores for the given variants using the specified acquisition strategy.
+
+        Args:
+            variants: List of Variant objects.
+            model_predictions: List of model prediction scores for each variant.
+            acquisition_strategy: An object or function with a compute_scores method.
+
+        Returns:
+            List of acquisition scores (floats), one for each variant.
+        """
+        acquisition_scores = acquisition_strategy.compute_scores(predictions)
+        top_acquisition_scores = sorted(
+            acquisition_scores, key=lambda x: x.score, reverse=True
+        )[:num_top_acquisition_variants]
+        top_predictions = sorted(predictions, key=lambda x: x.score,
+                                 reverse=True
+                                 )[:num_top_prediction_variants]
+        top_variant_ids = [acq_score.variant_id for acq_score
+                           in top_acquisition_scores] + \
+                          [pred.variant_id for pred in top_predictions]
+        top_selected_variants_inner_join = \
+            [SelectedVariant(variant=variant)
+             for variant in variants
+             if variant.id in top_variant_ids
+             for top_prediction in top_predictions
+             if top_prediction.variant_id == variant.id
+             for top_acq_score in top_acquisition_scores
+             if top_acq_score.variant_id == variant.id]
+        top_selected_variants_left_join = \
+            [SelectedVariant(variant=variant)
+             for variant in variants
+             if variant.id in top_variant_ids
+             for top_prediction in top_predictions
+             if top_prediction.variant_id == variant.id
+             and not any(top_acq_score.variant_id == variant.id
+                         for top_acq_score in top_acquisition_scores)]
+        top_selected_variants = [SelectedVariant(variant=variant) for variant in
+                                top_selected_variants if variant.id in
+                                top_variant_ids]
+        top_acquisition_scores = [
+            acq_score for variant_id in top_variant_ids
+            for acq_score in acquisition_scores
+            if acq_score.variant_id == variant_id
+        ]
+        top_predictions = [
+            prediction for variant_id in top_variant_ids
+            for prediction in predictions
+            if prediction.variant_id == variant_id
+        ]
+        top_variants = [
+            variant for variant_id in top_variant_ids
+            for variant in variants
+            if variant.id == variant_id
+        ]
+        return top_variants, top_predictions, top_acquisition_scores
+
+    def _select_top_variants1(
+        self,
+        variants: list[Variant],
+        acquisition_scores: list[AcquisitionScore],
+        num_to_select: int
+    ) -> Tuple[list[Variant], list[AcquisitionScore]]:
+        """
+        Selects the top variants based on acquisition scores.
+
+        Args:
+            acquisition_scores: List of AcquisitionScore objects.
+            num_to_select: Number of top variants to select.
+
+        Returns:
+            Tuple of (selected_variants, selected_acquisition_scores)
+        """
+        # Sort acquisition_scores by score in descending order
+        sorted_scores = sorted(acquisition_scores, key=lambda x: x.score,
+                               reverse=True)
+        selected_scores = sorted_scores[:num_to_select]
+        # Get the corresponding variants in the same sorted order
+        # as selected_scores
+        selected_variants = [variant for score in selected_scores
+                             for variant in variants if variant.id
+                             == score.variant_id]
+        return selected_variants, selected_scores
+        
+    def _get_best_variant(self, assay_results: list[AssayResult]) -> AssayResult:
+        """
+        Returns the AssayResult with the highest score from the list.
+        If the list is empty, returns None.
+        """
+        return max(assay_results, key=lambda x: x.score)
+
+    def _save_proposed_variants(
+        self,
+        round_id: int,
+        variants: list[Variant],
+        assay_results: list[AssayResult],
+        acquisition_scores: list[AcquisitionScore],
+        predictions: list[ModelPrediction],
+        best_variant: AssayResult,
+    ):
+        """
+        Saves the proposed variants and their associated data for a given round.
+        This method should persist the information to the repository or database.
+        """
+        for variant, assay_result in zip(variants, assay_results):
+            acq_score = next((a for a in acquisition_scores if a.variant_id == variant.id), None)
+            prediction = next((p for p in predictions if p.variant_id == variant.id), None)
+            self._repository.add_round_variant(
+                round_id=round_id,
+                variant_id=variant.id,
+                assay_score=assay_result.score if assay_result else None,
+                acquisition_score=acq_score.score if acq_score else None,
+                prediction_score=prediction.score if prediction else None,
+                is_best=(best_variant is not None and variant.id == best_variant.variant_id),
+            )
+
     def run_simulation(
         self,
         run_configuration: str,
         num_rounds: int = 5,
         num_selected_variants_first_round: int = 10,
-        num_selected_variants_per_round: int = 10,
+        num_top_acquistion_score_variants_per_round: int = 10,
+        num_top_prediction_score_variants_per_round: int = 10,
         batch_size: int = 10,
         test_fraction: float = 0.2,
         random_seed: int = 42,
     ):
 
         assay_variants, assay_results = self._load_assay_data()
+        assay_variants = self._embed_variants(assay_variants)
         (
             simulation_variants,
             simulation_assay_results,
@@ -117,15 +357,17 @@ class DESimulator:
         run_id = self._create_run(
             num_rounds,
             num_selected_variants_first_round,
-            num_selected_variants_per_round,
+            num_top_acquistion_score_variants_per_round,
+            num_top_prediction_score_variants_per_round,
             batch_size,
             test_fraction,
             random_seed,
+            max_assay_score
         )
         sub_runs = self._compile_sub_runs(run_configuration)
 
-        for sub_run_params in sub_runs:
-            sub_run_id = self._create_sub_run(run_id, sub_run_params)
+        for sub_run in sub_runs:
+            sub_run_id = self._create_sub_run(run_id, sub_run)
             train_variants = []
             train_assay_results = []
             for round in range(1, num_rounds + 1):
@@ -138,39 +380,41 @@ class DESimulator:
                     current_round_variants = self._random_sample_variants(
                         num_selected_variants_first_round, remaining_variants
                     )
-                    current_round_assay_results = self._get_assay_results_for_variants(
-                        current_round_variants, simulation_assay_results
-                    )
-                    current_round_acquisition_scores = (
-                        self._convert_assay_results_to_acquisition_scores(
-                            current_round_assay_results
+                    current_round_assay_results = \
+                        self._get_assay_results_for_variants(
+                            current_round_variants, simulation_assay_results
                         )
-                    )
+                    current_round_variant_data = [SelectedVariant(
+                        variant=variant) for variant in current_round_variants
+                    ]
                 else:
                     predictions = self._make_predictions(
-                        sub_run_params.model, remaining_variants
+                        sub_run.learner, remaining_variants
                     )
-                    acquisition_scores = self._compute_acquisition_scores(
-                        sub_run_params.acquisition_strategy, predictions
-                    )
-                    current_round_variants, current_round_acquisition_scores = (
-                        self._select_top_variants(
-                            acquisition_scores, num_selected_variants_per_round
+                    current_round_variants, current_round_predictions, \
+                        current_round_acquisition_scores = (
+                            self._select_top_variants(
+                                sub_run.acquisition_strategy,
+                                remaining_variants,
+                                predictions,
+                                num_top_acquistion_score_variants_per_round,
+                                num_top_prediction_score_variants_per_round,
+                            )
                         )
-                    )
-                    current_round_assay_results = self._get_assay_results_for_variants(
-                        current_round_variants, simulation_assay_results
-                    )
+                    current_round_assay_results = \
+                        self._get_assay_results_for_variants(
+                            current_round_variants, simulation_assay_results
+                        )
 
-                best_variant = self._get_best_variant(current_round_assay_results)
+                best_variant = self._get_best_variant(
+                    current_round_assay_results)
                 self._save_proposed_variants(
                     round_id,
-                    round,
                     current_round_variants,
                     current_round_assay_results,
                     current_round_acquisition_scores,
+                    current_round_predictions,
                     best_variant,
-                    max_assay_score,
                 )
                 train_variants.append(current_round_variants)
                 train_assay_results.append(current_round_assay_results)
@@ -178,7 +422,8 @@ class DESimulator:
                     remaining_variants, current_round_variants
                 )
                 self._fit_model(train_variants, train_assay_results)
-                test_predictions = self._make_variant_predictions(test_variants)
+                test_predictions = self._make_variant_predictions(
+                    test_variants)
                 test_performance_metrics = self._compute_preformance_metrics(
                     test_predictions, test_assay_results
                 )

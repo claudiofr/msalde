@@ -5,6 +5,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import BaggingRegressor
 
+from .model import ModelPrediction, Variant
+
 from .plm import PLMModel
 from .learner import Learner, LearnerFactory
 
@@ -71,9 +73,9 @@ class RidgeLearner(Learner):
 
     def predict(
         self,
-        embeddings: np.ndarray,
+        variants: list[Variant],
         return_std: bool = False,
-    ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+    ) -> list[ModelPrediction]:
         """
         Make predictions with the ridge regression model.
 
@@ -84,43 +86,33 @@ class RidgeLearner(Learner):
         Returns:
             Predictions [n_samples] or tuple of (predictions, uncertainties)
         """
-        if not self.is_fitted:
-            logger.warning("Model not fitted yet, returning zeros")
-            if return_std:
-                return np.zeros(embeddings.shape[0]), np.ones(embeddings.shape[0])
-            else:
-                return np.zeros(embeddings.shape[0])
 
         # Reduce dimensionality
-        X = self._reduce_embeddings(embeddings)
+        X = self._transform_embeddings([v.embedding for var in variants])
 
         # Scale features
-        X = self.scaler.transform(X)
+        X = self._scaler.transform(X)
 
         # Make predictions
-        if hasattr(self.model, 'predict') and not return_std:
+        if not return_std:
             # Standard prediction
-            return self.model.predict(X)
-        elif hasattr(self.model, 'estimators_') and return_std:
+            predicted_scores = self._model.predict(X)
+            return [ModelPrediction(variant_id=variant.id, score=score) for
+                    variant, score in zip(variants, predicted_scores)]
+        else:
             # For ensemble models, get predictions from all estimators
-            predictions = np.zeros((X.shape[0], len(self.model.estimators_)))
-            for i, estimator in enumerate(self.model.estimators_):
+            predictions = np.zeros((X.shape[0], len(self._model.estimators_)))
+            for i, estimator in enumerate(self._model.estimators_):
                 predictions[:, i] = estimator.predict(X)
 
             # Calculate mean and std across estimators
-            mean_pred = np.mean(predictions, axis=1)
-            std_pred = np.std(predictions, axis=1)
+            prediction_means = np.mean(predictions, axis=1)
+            prediction_stds = np.std(predictions, axis=1)
 
-            return mean_pred, std_pred
-        else:
-            # Fallback for non-ensemble models
-            preds = self.model.predict(X)
-            if return_std:
-                # Use a simple heuristic for uncertainty
-                uncertainties = np.ones_like(preds) * 0.1
-                return preds, uncertainties
-            else:
-                return preds
+            return [ModelPrediction(
+                variant_id=variant.id, score=score, uncertaintity=std) for
+                variant, score, std in zip(variants, prediction_means,
+                prediction_stds)]
 
 
 class RidgeLearnerFactory(LearnerFactory):
