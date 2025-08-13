@@ -1,9 +1,9 @@
-simulations:
+sub_runs:
   - name: "Simulation 1"
     description: "First simulation"
     learner:
       name: "RidgeRegression"
-      uses_plm: true
+      uses_embedder: true
       parameters:
         input_dim: 128
         alpha: 1.0
@@ -18,7 +18,7 @@ simulations:
     description: "Second simulation"
     learner:
       name: "MLPRegression"
-      uses_plm: true
+      uses_embedder: true
       parameters:
         input_dim: 128
         alpha: 0.0001

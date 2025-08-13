@@ -1,0 +1,18 @@
+db:
+  url: "sqlite:///./db/msalde.db"
+data_loader:
+  input_path: "./test_data/test_assay_small1.csv"
+  column_names:
+    id_col: "id"
+    # name_col: "id"
+    sequence_col: "sequence"
+    score_col: "score"
+embedder:
+  model_name: facebook/esm2_t6_8M_UR50D
+  cache_dir: "./model_cache"
+  device: "cpu"
+  batch_size: 8
+  use_pooling: true
+  quantize: false
+sub_runs:
+  config_file: "./config/simulations.yaml"

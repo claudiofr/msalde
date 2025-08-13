@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, Float, String, Date, DateTime, ForeignKey
+    Boolean, Column, Integer, Float, String, Date, DateTime, ForeignKey
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -10,13 +10,17 @@ class ALDERun(Base):
     __tablename__ = 'alde_run'
     id = Column(Integer, primary_key=True)
     num_rounds = Column(Integer, nullable=False)  # num_rounds
+    num_variants = Column(Integer, nullable=False)  # num_variants
     num_selected_variants_first_round = Column(
-        Integer, nullable=False)  # num_selected_variants_first_round
-    num_selected_variants_per_round = Column(
-        Integer, nullable=False)  # num_selected_variants_per_round
+        Integer, nullable=False)
+    num_top_acquistion_score_variants_per_round = Column(
+        Integer, nullable=False)
+    num_top_prediction_score_variants_per_round = Column(
+        Integer, nullable=False)
     batch_size = Column(Integer, nullable=False)
     test_fraction = Column(Float, nullable=False)
     random_seed = Column(Integer, nullable=False)
+    max_assay_score = Column(Float, nullable=False)
     start_ts = Column(DateTime)
     end_ts = Column(DateTime)
 
@@ -48,7 +52,6 @@ class ALDERound(Base):
     spearman = Column(Float)
     top_n_mean = Column(Float)
     best_variant_id = Column(Integer)
-    max_simulation_score_delta = Column(Float)
     start_ts = Column(DateTime)
     end_ts = Column(DateTime)
 
@@ -62,9 +65,11 @@ class ALDERoundVariant(Base):
     variant_name = Column(String(100), nullable=False)
     variant_sequence = Column(String, nullable=False)
     assay_score = Column(Float)
-    model_score = Column(Float)
+    prediction_score = Column(Float)
     acquisition_score = Column(Float)
     round_id = Column(Integer, ForeignKey('alde_round.id'))
+    top_acquisition_score = Column(Boolean)
+    top_prediction_score = Column(Boolean)
     insert_ts = Column(DateTime)
 
     round = relationship("ALDERound", back_populates="round_variants")

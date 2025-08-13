@@ -50,13 +50,9 @@ class RidgeLearner(Learner):
             uncertainties: Optional measurement uncertainties [n_samples]
         """
         # Log input data stats
-        logger.info(f"Fitting RidgeLearner with {len(scores)} samples")
-        logger.info(
-            f"Scores range: min={np.min(scores):.4f}, max={np.max(scores):.4f}, mean={np.mean(scores):.4f}")
 
         # Reduce dimensionality
         X = self._fit_transform_embeddings(embeddings)
-        logger.info(f"Reduced embeddings shape: {X.shape}")
 
         # Scale features
         X = self.scaler.fit_transform(X)
@@ -65,16 +61,11 @@ class RidgeLearner(Learner):
         self.model.fit(X, scores)
 
         # Log model info
-        if hasattr(self.model, 'estimators_'):
-            logger.info(f"Fitted {len(self.model.estimators_)} estimators")
-
         self.is_fitted = True
-        logger.info("Model fitting complete")
 
     def predict(
         self,
         variants: list[Variant],
-        return_std: bool = False,
     ) -> list[ModelPrediction]:
         """
         Make predictions with the ridge regression model.
@@ -94,7 +85,9 @@ class RidgeLearner(Learner):
         X = self._scaler.transform(X)
 
         # Make predictions
-        if not return_std:
+        has_estimators = hasattr(self._model, "estimators_") and \
+            len(self._model.estimators_) > 0
+        if not has_estimators:
             # Standard prediction
             predicted_scores = self._model.predict(X)
             return [ModelPrediction(variant_id=variant.id, score=score) for
@@ -120,7 +113,7 @@ class RidgeLearnerFactory(LearnerFactory):
     Factory class for creating RidgeLearner instances.
     This is a placeholder for the actual implementation.
     """
-    def create_learner(self, **kwargs) -> RidgeLearner:
+    def create_instance(self, **kwargs) -> RidgeLearner:
         """
         Create a RidgeLearner instance with the given parameters.
         """
