@@ -1,5 +1,5 @@
 from .model import ModelPrediction
-from .strategy import AcquisitionStrategy
+from .strategy import AcquisitionStrategy, AcquisitionStrategyFactory
 import numpy as np
 
 
@@ -19,3 +19,9 @@ class RandomStrategy(AcquisitionStrategy):
         """
         scores = np.random.rand(len(variant_predictions))
         return scores
+
+
+class RandomStrategyFactory(AcquisitionStrategyFactory):
+
+    def create_instance(self, **kwargs) -> AcquisitionStrategy:
+        return RandomStrategy()

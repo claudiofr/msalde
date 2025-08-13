@@ -1,25 +1,19 @@
 from omegaconf import OmegaConf
-from .repository import (
-    VariantEffectScoreRepository,
-    VariantEffectLabelRepository,
-    RepoSessionContext,
-    VariantFilterRepository,
-    VariantRepository,
-    VariantEffectSourceRepository,
-    VariantTaskRepository,
-    TABLE_DEFS
-)
-from .analyzer import VEAnalyzer
-from .query import VEBenchmarkQueryMgr
-from .reporter import VEAnalysisReporter
-from .plotter import VEAnalysisPlotter
-from .exporter import VEAnalysisExporter
-from .util import Config
-from .repo_qc import VEDataValidator
 
-from omegaconf import OmegaConf
+from .learner import Learner
+from .strategy import AcquisitionStrategy
+
+from .acquisition_strategy import RandomStrategyFactory
+from .esm_embedder import ESMEmbedder
+
+from .simulator import DESimulator
+from .active_learner import RidgeLearnerFactory
+from .data_file_loader import VariantDataFileLoader
+from .repository import (
+    ALDERepository,
+    RepoSessionContext,
+)
 import yaml
-import os
 
 
 class ALDEContainer:
@@ -28,11 +22,12 @@ class ALDEContainer:
     It could be reimplemented in the future if we decide to use
     a proper one. The interface, however, would remain the same.
     """
-
     _learner_factories = {
-        "RidgeLearner": RidgeLearnerFactory,
+            "RidgeRegression": RidgeLearnerFactory,
     }
-
+    _acquisition_strategy_factories = {
+            "Random": RandomStrategyFactory,
+        }
 
     def __init__(self, config_file: str = "./config/msalde.yaml"):
         """
@@ -48,71 +43,28 @@ class ALDEContainer:
             config_dict = yaml.safe_load(f)
 
         # Convert to OmegaConf
-        self.config = OmegaConf.create(config_dict)
-        self._repo_session_context = RepoSessionContext(
-            self.config.repository.root_dir, TABLE_DEFS)
-        self._variant_task_repo = VariantTaskRepository(
-            self._repo_session_context)
-        self._variant_repo = VariantRepository(self._repo_session_context)
-        self._variant_filter_repo = VariantFilterRepository(
-            self._repo_session_context)
-        self._label_repo = VariantEffectLabelRepository(
-            self._repo_session_context,
-            self._variant_task_repo,
-            self._variant_repo,
-            self._variant_filter_repo)
-        self._score_repo = VariantEffectScoreRepository(
-            self._repo_session_context,
-            self._variant_task_repo,
-            self._variant_repo,
-            self._variant_filter_repo)
-        self._variant_effect_source_repo = VariantEffectSourceRepository(
-            self._repo_session_context,
-            self._score_repo)
-        self._variant_filter_repo = VariantFilterRepository(
-            self._repo_session_context
+        config = OmegaConf.create(config_dict)
+        sub_run_config_file = config.sub_runs.config_file
+        with open(sub_run_config_file, "r") as f:
+            sub_run_config_dict = yaml.safe_load(f)
+        sub_run_config = OmegaConf.create(sub_run_config_dict)
+
+        repo_session_context = RepoSessionContext(
+            config.db.url)
+        self._repository = ALDERepository(repo_session_context)
+        self._data_loader = VariantDataFileLoader(config.data_loader)
+        self._embedder = ESMEmbedder(config.embedder)
+        self._simulator = DESimulator(
+            repository=self._repository,
+            data_loader=self._data_loader,
+            embedder=self._embedder,
+            learner_factories=self._learner_factories,
+            acquisition_strategy_factories=
+            self._acquisition_strategy_factories,
+            sub_run_defs=sub_run_config.sub_runs
         )
-        self._analyzer = VEAnalyzer(
-            self._score_repo,
-            self._label_repo,
-            self._variant_effect_source_repo)
-        self._query_mgr = VEBenchmarkQueryMgr(self._label_repo,
-                                              self._variant_repo,
-                                              self._variant_task_repo,
-                                              self._variant_effect_source_repo,
-                                              self._score_repo,
-                                              self._variant_filter_repo)
-        self._reporter = VEAnalysisReporter()
-        self._plotter = VEAnalysisPlotter(self.config.plot)
-        self._exporter = VEAnalysisExporter()
-        self._data_validator = VEDataValidator(
-            self._label_repo,
-            self._variant_repo,
-            self._variant_task_repo,
-            self._variant_effect_source_repo,
-            self._score_repo,
-            self._variant_filter_repo)
 
     @property
-    def analyzer(self):
-        return self._analyzer
+    def simulator(self):
+        return self._simulator
 
-    @property
-    def query_mgr(self):
-        return self._query_mgr
-
-    @property
-    def reporter(self):
-        return self._reporter
-
-    @property
-    def plotter(self):
-        return self._plotter
-
-    @property
-    def exporter(self):
-        return self._exporter
-
-    @property
-    def data_validator(self):
-        return self._data_validator

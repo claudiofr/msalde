@@ -8,7 +8,7 @@ class AcquisitionStrategy:
     def __init__(self, name: str, parameters: dict):
         self._name = name
         self._parameters = parameters
-    
+
     def compute_scores(self,
                        variant_predictions: list[ModelPrediction]) -> \
             list[AcquisitionScore]:
@@ -24,3 +24,11 @@ class AcquisitionStrategy:
         # Sort by score in descending order
         return scores.sort_values('SCORE', reverse=True)[:num_candidates]
 
+
+class AcquisitionStrategyFactory:
+
+    # This method should be overridden by subclasses
+    def create_instance(self, **kwargs) -> AcquisitionStrategy:
+        raise NotImplementedError(
+            "This method should be overridden by subclasses"
+            )

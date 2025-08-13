@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 from typing import Optional, Tuple
 
-from .model import ModelPrediction
+from .model import ModelPrediction, Variant
 
 
 class Learner:
@@ -83,7 +83,7 @@ class Learner:
         raise NotImplementedError("Subclasses must implement fit method")
 
     def predict(
-        self, variants: list[Variants]
+        self, variants: list[Variant],
     ) -> list[ModelPrediction]:
         """
         Predict scores and uncertainties.
@@ -132,7 +132,7 @@ class LearnerFactory:
     _base_learner_params = ["input_dim", "random_state"]
 
     # This method should be overridden by subclasses
-    def create_learner(self, **kwargs) -> Learner:
+    def create_instance(self, **kwargs) -> Learner:
         raise NotImplementedError("This method should be overridden by subclasses")
 
     def extract_learner_params(self, **kwargs) -> dict:
