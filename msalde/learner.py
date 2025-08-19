@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.decomposition import PCA
 from typing import Optional, Tuple
+from sklearn.preprocessing import StandardScaler
 
 from .model import ModelPrediction, Variant
 
@@ -29,8 +30,9 @@ class Learner:
         if self._input_dim is not None:
             self._pca = PCA(n_components=self._input_dim,
                             random_state=self._random_state)
+        self._scaler = StandardScaler()
 
-    def fit_transform_embeddings(self, embeddings: np.ndarray) -> np.ndarray:
+    def _fit_transform_embeddings(self, embeddings: np.ndarray) -> np.ndarray:
         """
         Reduce dimensionality of embeddings.
 
@@ -49,9 +51,9 @@ class Learner:
             return embeddings
 
         # Fit PCA
-        return self.pca.fit_transform(embeddings)
+        return self._pca.fit_transform(embeddings)
 
-    def transform_embeddings(self, embeddings: np.ndarray) -> np.ndarray:
+    def _transform_embeddings(self, embeddings: np.ndarray) -> np.ndarray:
         """
         Reduce dimensionality of embeddings.
 
@@ -61,14 +63,38 @@ class Learner:
         Returns:
             Reduced embeddings [n_samples, reduced_dim]
         """
-        if self._pca is None or not hasattr(self.pca, 'components_'):
+        if self._pca is None or not hasattr(self._pca, 'components_'):
             return embeddings
 
         return self._pca.transform(embeddings)
 
+    def _fit_scale_embeddings(self, embeddings: np.ndarray) -> np.ndarray:
+        """
+        Scale embeddings.
+
+        Args:
+            embeddings: Protein embeddings [n_samples, embedding_dim]
+
+        Returns:
+            Scaled embeddings [n_samples, embedding_dim]
+        """
+        return self._scaler.fit_transform(embeddings)
+
+    def _scale_embeddings(self, embeddings: np.ndarray) -> np.ndarray:
+        """
+        Scale embeddings.
+
+        Args:
+            embeddings: Protein embeddings [n_samples, embedding_dim]
+
+        Returns:
+            Scaled embeddings [n_samples, embedding_dim]
+        """
+        return self._scaler.transform(embeddings)
+
     def fit(
         self,
-        sequences: np.ndarray,
+        variants: list[Variant],
         scores: np.ndarray,
         uncertainties: Optional[np.ndarray] = None,
     ) -> None:

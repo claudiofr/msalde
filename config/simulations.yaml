@@ -3,33 +3,39 @@ sub_runs:
     description: "First simulation"
     learner:
       name: "RidgeRegression"
-      uses_embedder: true
+      uses_embedder: false
+      uses_random_seed: false
       parameters:
         input_dim: 128
         alpha: 1.0
         num_estimators: 10
         random_state: 42
+    first_round_acquisition_strategy:
+      name: "Random"
+      parameters: {}
+      uses_random_seed: true
     acquisition_strategies:
-      - name: "Random"
+      - name: "Greedy"
         parameters: {}
-      - name: "Bald"
-        parameters: {}
-  - name: "Simulation 2"
-    description: "Second simulation"
-    learner:
-      name: "MLPRegression"
-      uses_embedder: true
-      parameters:
-        input_dim: 128
-        alpha: 0.0001
-        hidden_layer_sizes: [64, 32]
-        learning_rate_init: 0.001
-        max_iter: 200
-        num_dropout_samples: 10
-        random_state: 42
-  - name: "Simulation 2"
-    description: "Second simulation"
-    config_path: "./config/simulations/sim2.yaml"
-  - name: "Simulation 3"
-    description: "Third simulation"
-    config_path: "./config/simulations/sim3.yaml"
+        uses_random_seed: false
+      # - name: "Bald"
+      #   parameters: {}
+  # - name: "Simulation 2"
+  #   description: "Second simulation"
+  #   learner:
+  #     name: "MLPRegression"
+  #     uses_embedder: true
+  #     parameters:
+  #       input_dim: 128
+  #       alpha: 0.0001
+  #       hidden_layer_sizes: [64, 32]
+  #       learning_rate_init: 0.001
+  #       max_iter: 200
+  #       num_dropout_samples: 10
+  #       random_state: 42
+  # - name: "Simulation 2"
+  #   description: "Second simulation"
+  #   config_path: "./config/simulations/sim2.yaml"
+  # - name: "Simulation 3"
+  #   description: "Third simulation"
+  #   config_path: "./config/simulations/sim3.yaml"

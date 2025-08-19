@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import BaggingRegressor
 
-from .model import ModelPrediction, Variant
+from .model import ModelComponentPrediction, ModelPrediction, Variant
 
 from .plm import PLMModel
 from .learner import Learner, LearnerFactory
@@ -20,15 +20,12 @@ class RidgeLearner(Learner):
             self,
             input_dim: Optional[int] = None,
             random_state: Optional[int] = None,
-            plm_model: Optional[str] = PLMModel,
             alpha: float = 1.0,
             num_estimators: int = 10,
             ):
         super().__init__(input_dim, random_state)
-        self._plm_model = plm_model
         self._alpha = alpha
         self._num_estimators = num_estimators
-        self._scaler = StandardScaler()
         self._model = BaggingRegressor(
             Ridge(alpha=alpha),
             n_estimators=num_estimators,
@@ -37,7 +34,7 @@ class RidgeLearner(Learner):
 
     def fit(
         self,
-        sequences: np.ndarray,
+        variants: list[Variant],
         scores: np.ndarray,
         uncertainties: Optional[np.ndarray] = None,
     ) -> None:
@@ -52,13 +49,14 @@ class RidgeLearner(Learner):
         # Log input data stats
 
         # Reduce dimensionality
+        embeddings = np.asarray([v.embedding for v in variants])
         X = self._fit_transform_embeddings(embeddings)
 
         # Scale features
-        X = self.scaler.fit_transform(X)
+        X = self._fit_scale_embeddings(X)
 
         # Fit model
-        self.model.fit(X, scores)
+        self._model.fit(X, scores)
 
         # Log model info
         self.is_fitted = True
@@ -79,10 +77,11 @@ class RidgeLearner(Learner):
         """
 
         # Reduce dimensionality
-        X = self._transform_embeddings([v.embedding for var in variants])
+        embeddings = np.asarray([v.embedding for v in variants])
+        X = self._transform_embeddings(embeddings)
 
         # Scale features
-        X = self._scaler.transform(X)
+        X = self._scale_embeddings(X)
 
         # Make predictions
         has_estimators = hasattr(self._model, "estimators_") and \
@@ -103,9 +102,12 @@ class RidgeLearner(Learner):
             prediction_stds = np.std(predictions, axis=1)
 
             return [ModelPrediction(
-                variant_id=variant.id, score=score, uncertaintity=std) for
-                variant, score, std in zip(variants, prediction_means,
-                prediction_stds)]
+                variant_id=variant.id, score=score, uncertainty=std,
+                component_predictions=[ModelComponentPrediction(score=pred)
+                                       for pred in component_preds]
+                ) for
+                variant, score, std, component_preds in zip(
+                    variants, prediction_means, prediction_stds, predictions)]
 
 
 class RidgeLearnerFactory(LearnerFactory):

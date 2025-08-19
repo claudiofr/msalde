@@ -5,9 +5,6 @@ class AcquisitionStrategy:
     """
     Base class for acquisition strategies.
     """
-    def __init__(self, name: str, parameters: dict):
-        self._name = name
-        self._parameters = parameters
 
     def compute_scores(self,
                        variant_predictions: list[ModelPrediction]) -> \
