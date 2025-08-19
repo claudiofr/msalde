@@ -3,7 +3,7 @@ from omegaconf import OmegaConf
 from .learner import Learner
 from .strategy import AcquisitionStrategy
 
-from .acquisition_strategy import RandomStrategyFactory
+from .acquisition_strategy import GreedyStrategyFactory, RandomStrategyFactory
 from .esm_embedder import ESMEmbedder
 
 from .simulator import DESimulator
@@ -23,10 +23,11 @@ class ALDEContainer:
     a proper one. The interface, however, would remain the same.
     """
     _learner_factories = {
-            "RidgeRegression": RidgeLearnerFactory,
+            "RidgeRegression": RidgeLearnerFactory(),
     }
     _acquisition_strategy_factories = {
-            "Random": RandomStrategyFactory,
+            "Random": RandomStrategyFactory(),
+            "Greedy": GreedyStrategyFactory(),
         }
 
     def __init__(self, config_file: str = "./config/msalde.yaml"):

@@ -8,10 +8,17 @@ import numpy as np
 class SubRunParameters:
     learner_name: str
     learner_parameters: str
+    learner_uses_embedder: bool
+    learner_uses_random_seed: bool
+    first_round_acquisition_strategy_name: str
+    first_round_acquisition_strategy_parameters: str
+    first_round_acquisition_strategy_uses_random_seed: bool
     acquisition_strategy_name: str
     acquisition_strategy_parameters: str
-    learner: object
-    acquisition_strategy: object
+    acquisition_strategy_uses_random_seed: bool
+    learner:  Optional[object] = None
+    first_round_acquisition_strategy: Optional[object] = None
+    acquisition_strategy: Optional[object] = None
 
 
 @dataclass
@@ -35,12 +42,21 @@ class AssayResult:
 
 
 @dataclass
+class ModelComponentPrediction:
+    """Experimental assay result."""
+
+    score: float
+    uncertainty: Optional[float] = None
+
+
+@dataclass
 class ModelPrediction:
     """Experimental assay result."""
 
     variant_id: Union[int, str]
     score: float
     uncertainty: Optional[float] = None
+    component_predictions: Optional[list[ModelComponentPrediction]] = None
 
 
 @dataclass
@@ -69,4 +85,4 @@ class PerformanceMetrics:
     rmse: float
     r2: float
     spearman: float
-    top_n_mean = float
+    top_n_mean: float
