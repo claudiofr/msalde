@@ -2,9 +2,10 @@ import json
 import numpy as np
 from scipy.stats import spearmanr
 from sklearn.metrics import mean_squared_error, r2_score
+from itertools import chain
 
 from datetime import datetime
-from typing import Tuple
+from typing import Tuple, Iterable
 
 from .dbmodel import ALDERound, ALDERun, ALDESubRun, ALDESimulation
 
@@ -345,7 +346,7 @@ class DESimulator:
         database.
         """
         for variant, assay_result in zip(variants, assay_results):
-            self._repository.add_round_variant(
+            self._repository.add_round_acquired_variant(
                 round_id=round_id,
                 variant_id=variant.variant.id,
                 variant_name=variant.variant.name,
@@ -390,7 +391,11 @@ class DESimulator:
 
     def _compute_performance_metrics(
         self,
-        predictions: list[ModelPrediction],
+        train_predictions: list[ModelPrediction],
+        train_assay_results: list[AssayResult],
+        validation_predictions: list[ModelPrediction],
+        validation_assay_results: list[AssayResult],
+        test_predictions: list[ModelPrediction],
         test_assay_results: list[AssayResult],
         num_predictions_for_top_n_mean: int = 10
     ) -> PerformanceMetrics:
@@ -404,22 +409,50 @@ class DESimulator:
         Returns:
             Dictionary containing performance metrics
         """
-        
-        y_pred = [pred.score for pred in predictions]
-        y_true = [result.score for result in test_assay_results]
 
-        # Calculate metrics
-        rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-        r2 = r2_score(y_true, y_pred)
-        spearman_corr, _ = spearmanr(y_true, y_pred)
-        top_n_mean = np.mean(sorted(y_pred, reverse=True
-                                    )[:num_predictions_for_top_n_mean])
+        def _compute_metrics(
+                predictions: Iterable[ModelPrediction],
+                assay_results: Iterable[AssayResult]) -> Tuple[float, float,
+                                                               float]:
+            if predictions is None:
+                return None, None, None
+            y_pred = [pred.score for pred in predictions]
+            y_true = [result.score for result in assay_results]
+
+            # Calculate metrics
+            rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+            r2 = r2_score(y_true, y_pred)
+            spearman_corr, _ = spearmanr(y_true, y_pred)
+
+            return rmse, r2, spearman_corr
+        
+        train_rmse, train_r2, train_spearman_corr = _compute_metrics(
+            train_predictions, train_assay_results
+        )
+        val_rmse, val_r2, val_spearman_corr = _compute_metrics(
+            validation_predictions, validation_assay_results
+        )
+        test_rmse, test_r2, test_spearman_corr = _compute_metrics(
+            test_predictions, test_assay_results
+        )
+        train_val_predictions = chain(train_predictions,
+                                      validation_predictions)
+        train_val_assay_results = chain(train_assay_results,
+                                        validation_assay_results)
+        _, _, spearman_corr = _compute_metrics(
+            train_val_predictions, train_val_assay_results)
 
         return PerformanceMetrics(
-            rmse=rmse,
-            r2=r2,
-            spearman=spearman_corr,
-            top_n_mean=top_n_mean
+            train_rmse=train_rmse,
+            train_r2=train_r2,
+            train_spearman=train_spearman_corr,
+            validation_rmse=val_rmse,
+            validation_r2=val_r2,
+            validation_spearman=val_spearman_corr,
+            test_rmse=test_rmse,
+            test_r2=test_r2,
+            test_spearman=test_spearman_corr,
+            spearman=spearman_corr
         )
 
     def run_simulations(
@@ -555,17 +588,47 @@ class DESimulator:
             remaining_variants = self._subtract_variant_lists(
                 remaining_variants, current_round_variants
             )
+            remaining_variants_results = self._get_assay_results_for_variants(
+                remaining_variants, simulation_assay_results
+            )
             self._fit_model(sub_run_params.learner, train_variants,
                             train_assay_results)
-            test_predictions = self._make_predictions(
-                sub_run_params.learner, test_variants)
-            test_performance_metrics = self._compute_performance_metrics(
-                test_predictions, test_assay_results,
+            train_predictions = self._make_predictions(
+                sub_run_params.learner, train_variants
+                )
+            if len(remaining_variants) > 0:
+                remaining_variants_predictions = self._make_predictions(
+                    sub_run_params.learner, remaining_variants
+                    )
+            else:
+                remaining_variants_predictions = None
+            if len(test_variants) > 0:
+                test_predictions = self._make_predictions(
+                    sub_run_params.learner, test_variants)
+            else:
+                test_predictions = None
+            performance_metrics = self._compute_performance_metrics(
+                train_predictions, train_assay_results,
+                remaining_variants_predictions,
+                remaining_variants_results,
+                test_predictions,
+                test_assay_results,
                 num_predictions_for_top_n_mean
             )
             best_variant = self._get_best_variant(
                 current_round_assay_results)
-            self._end_round(round.id, test_performance_metrics,
+            top_variants, top_variant_predictions, top_variant_results = \
+                self._get_top_predicted_variants(
+                    train_predictions, train_assay_results,
+                    remaining_variants_predictions,
+                    remaining_variants_results,
+                    simulation_variants,
+                    num_predictions_for_top_n_mean
+                )
+            self._save_top_variants(round.id, top_variants,
+                                    top_variant_predictions,
+                                    top_variant_results)
+            self._end_round(round.id, performance_metrics,
                             best_variant)
         self._end_simulation(simulation.id)
 
@@ -681,3 +744,75 @@ class DESimulator:
             id=simulation_id,
             end_ts=datetime.now(),
         )
+
+    def _get_top_predicted_variants(
+        self,
+        train_predictions: list[ModelPrediction],
+        train_assay_results: list[AssayResult],
+        remaining_variants_predictions: list[ModelPrediction],
+        remaining_variants_results: list[AssayResult],
+        all_variants: list[Variant],
+        num_top_proposed_variants: int
+    ) -> Tuple[list[Variant], list[ModelPrediction], list[AssayResult]]:
+        """
+        Get the top predicted variants from combined train and remaining variants.
+        
+        Args:
+            train_predictions: Predictions for training variants
+            train_assay_results: Actual results for training variants
+            remaining_variants_predictions: Predictions for remaining variants
+            remaining_variants_results: Actual results for remaining variants
+            num_top_proposed_variants: Number of top variants to return
+        
+        Returns:
+            Tuple of (top_predictions, top_assay_results)
+        """
+        # Combine all predictions
+        all_predictions = train_predictions.copy()
+        all_assay_results = train_assay_results.copy()
+        
+        if remaining_variants_predictions:
+            all_predictions.extend(remaining_variants_predictions)
+            all_assay_results.extend(remaining_variants_results)
+        
+        # Sort by prediction score in descending order
+        sorted_predictions = sorted(all_predictions, key=lambda x: x.score, reverse=True)
+        top_predictions = sorted_predictions[:num_top_proposed_variants]
+        
+        # Get corresponding assay results
+        top_variant_ids = {pred.variant_id for pred in top_predictions}
+        top_assay_results = [result for result in all_assay_results
+                             if result.variant_id in top_variant_ids]
+        top_variants = [variant for variant in all_variants
+                        if variant.id in top_variant_ids]
+        top_predictions = sorted(top_predictions, key=lambda p: p.variant_id)
+        top_assay_results = sorted(top_assay_results,
+                                   key=lambda r: r.variant_id)
+        top_variants = sorted(top_variants, key=lambda v: v.id)
+
+        return top_variants, top_predictions, top_assay_results
+
+    def _save_top_variants(self, round_id: int,
+                           top_variants: list[Variant],
+                           top_variant_predictions: list[ModelPrediction],
+                           top_assay_results: list[AssayResult]):
+        """
+        Saves the top predicted variants for a given round.
+        
+        Args:
+            round_id: ID of the current round
+            top_variant_predictions: List of top variant predictions
+            top_variant_results: List of corresponding assay results
+        """
+    
+        for variant, prediction, assay_result in zip(
+                top_variants, top_variant_predictions, top_assay_results):
+
+            self._repository.add_round_top_variant(
+                round_id=round_id,
+                variant_id=variant.id,
+                variant_name=variant.name,
+                assay_score=assay_result.score,
+                prediction_score=prediction.score,
+                insert_ts=datetime.now(),
+            )

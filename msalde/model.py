@@ -28,6 +28,7 @@ class Variant:
     id: Union[int, str]
     name: str
     sequence: str
+    aa_substitution: Optional[str] = None
     embedding: Optional[np.ndarray] = None
 
 
@@ -82,7 +83,14 @@ class SelectedVariant:
 class PerformanceMetrics:
     """Performance metrics for a model run."""
 
-    rmse: float
-    r2: float
+    train_rmse: float
+    train_r2: float
+    train_spearman: float
+    validation_rmse: float
+    validation_r2: float
+    validation_spearman: float
+    test_rmse: float
+    test_r2: float
+    test_spearman: float
     spearman: float
-    top_n_mean: float
+    top_n_mean: Optional[float] = None

@@ -3,7 +3,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from .model import PerformanceMetrics
-from .dbmodel import ALDERound, ALDERoundVariant, ALDESimulation, ALDESubRun, Base
+from .dbmodel import (
+    ALDERound, ALDERoundAcquiredVariant, ALDESimulation,
+    ALDESubRun, Base, ALDERoundTopVariant
+)
 from .dbmodel import ALDERun
 
 
@@ -164,16 +167,24 @@ class ALDERepository:
         session = sessionmaker(bind=self._engine)
         with session() as session:
             round = session.query(ALDERound).get(round_id)
-            round.rmse = performance_metrics.rmse
-            round.r2 = performance_metrics.r2
-            round.spearman = performance_metrics.spearman
-            round.top_n_mean = performance_metrics.top_n_mean
+            if performance_metrics is not None:
+                round.train_rmse = performance_metrics.train_rmse
+                round.train_r2 = performance_metrics.train_r2
+                round.train_spearman = performance_metrics.train_spearman
+                round.validation_rmse = performance_metrics.validation_rmse
+                round.validation_r2 = performance_metrics.validation_r2
+                round.validation_spearman = performance_metrics.validation_spearman
+                round.test_rmse = performance_metrics.test_rmse
+                round.test_r2 = performance_metrics.test_r2
+                round.test_spearman = performance_metrics.test_spearman
+                round.spearman = performance_metrics.spearman
+                round.top_n_mean = performance_metrics.top_n_mean
             round.best_variant_id = best_variant_id
             round.end_ts = end_ts
             session.commit()
             return round
 
-    def add_round_variant(
+    def add_round_acquired_variant(
         self,
         round_id: int,
         variant_id: int,
@@ -184,10 +195,10 @@ class ALDERepository:
         top_acquisition_score=False,
         top_prediction_score=False,
         insert_ts=None,
-    ) -> ALDERoundVariant:
+    ) -> ALDERoundAcquiredVariant:
         session = sessionmaker(bind=self._engine)
         with session() as session:
-            round_variant = ALDERoundVariant(
+            round_variant = ALDERoundAcquiredVariant(
                 round_id=round_id,
                 variant_id=variant_id,
                 variant_name=variant_name,
@@ -196,6 +207,30 @@ class ALDERepository:
                 prediction_score=prediction_score,
                 top_acquisition_score=top_acquisition_score,
                 top_prediction_score=top_prediction_score,
+                insert_ts=insert_ts,
+            )
+            session.add(round_variant)
+            session.commit()
+            session.refresh(round_variant)
+            return round_variant
+
+    def add_round_top_variant(
+        self,
+        round_id: int,
+        variant_id: int,
+        variant_name=None,
+        assay_score=None,
+        prediction_score=None,
+        insert_ts=None,
+    ) -> ALDERoundTopVariant:
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            round_variant = ALDERoundTopVariant(
+                round_id=round_id,
+                variant_id=variant_id,
+                variant_name=variant_name,
+                assay_score=assay_score,
+                prediction_score=prediction_score,
                 insert_ts=insert_ts,
             )
             session.add(round_variant)

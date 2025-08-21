@@ -24,6 +24,7 @@ class ALDERun(Base):
     test_fraction = Column(Float, nullable=False)
     random_seed = Column(Integer, nullable=False)
     max_assay_score = Column(Float, nullable=False)
+    binary_score_cutoff = Column(Float)
     start_ts = Column(DateTime)
     end_ts = Column(DateTime)
 
@@ -64,8 +65,15 @@ class ALDERound(Base):
     id = Column(Integer, primary_key=True)
     simulation_id = Column(Integer, ForeignKey('alde_simulation.id'))
     round_num = Column(Integer, nullable=False)
-    rmse = Column(Float)
-    r2 = Column(Float)
+    train_rmse = Column(Float)
+    train_r2 = Column(Float)
+    train_spearman = Column(Float)
+    validation_rmse = Column(Float)
+    validation_r2 = Column(Float)
+    validation_spearman = Column(Float)
+    test_rmse = Column(Float)
+    test_r2 = Column(Float)
+    test_spearman = Column(Float)
     spearman = Column(Float)
     top_n_mean = Column(Float)
     best_variant_id = Column(Integer)
@@ -73,11 +81,14 @@ class ALDERound(Base):
     end_ts = Column(DateTime)
 
     simulation = relationship("ALDESimulation", back_populates="rounds")
-    round_variants = relationship("ALDERoundVariant", back_populates="round")
+    round_variants = relationship("ALDERoundAcquiredVariant",
+                                  back_populates="round")
+    round_top_variants = relationship("ALDERoundTopVariant",
+                                      back_populates="round")
 
 
-class ALDERoundVariant(Base):
-    __tablename__ = 'alde_round_variant'
+class ALDERoundAcquiredVariant(Base):
+    __tablename__ = 'alde_round_acquired_variant'
     id = Column(Integer, primary_key=True)
     round_id = Column(Integer, ForeignKey('alde_round.id'))
     variant_id = Column(Integer, nullable=False)
@@ -94,4 +105,21 @@ class ALDERoundVariant(Base):
     )
 
     round = relationship("ALDERound", back_populates="round_variants")
+
+
+class ALDERoundTopVariant(Base):
+    __tablename__ = 'alde_round_top_variant'
+    id = Column(Integer, primary_key=True)
+    round_id = Column(Integer, ForeignKey('alde_round.id'))
+    variant_id = Column(Integer, nullable=False)
+    variant_name = Column(String(100))
+    assay_score = Column(Float)
+    prediction_score = Column(Float)
+    insert_ts = Column(DateTime)
+
+    __table_args__ = (
+        UniqueConstraint('round_id', 'variant_id', name='uix_round_top_variant'),
+    )
+
+    round = relationship("ALDERound", back_populates="round_top_variants")
 
