@@ -39,7 +39,7 @@ class RandomStrategy(AcquisitionStrategy):
 class RandomStrategyFactory(AcquisitionStrategyFactory):
 
     def create_instance(self, **kwargs) -> AcquisitionStrategy:
-        return RandomStrategy()
+        return RandomStrategy(**kwargs)
 
 
 class GreedyStrategy(AcquisitionStrategy):

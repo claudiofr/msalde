@@ -1,8 +1,10 @@
+from typing import Optional
 from .model import Variant
 import numpy as np
 
 
 class ProteinEmbedder:
+
     def embed_sequences(self, sequences: list[str]) -> np.ndarray:
         pass
 

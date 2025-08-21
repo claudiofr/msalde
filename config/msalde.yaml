@@ -7,6 +7,10 @@ data_loader:
     # name_col: "id"
     sequence_col: "sequence"
     score_col: "score"
+  sequence_generator:
+    name: single_aa_substitution
+    wt_fasta_file: "./test_data/test_assay_small1.fasta"
+    substitution_col: "variant"
 embedder:
   model_name: facebook/esm2_t6_8M_UR50D
   cache_dir: "./model_cache"
