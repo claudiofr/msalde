@@ -66,3 +66,133 @@ class GreedyStrategyFactory(AcquisitionStrategyFactory):
         return GreedyStrategy()
 
 
+class UncertaintyStrategy(AcquisitionStrategy):
+    """
+    A strategy that selects variants where the model is least certain.
+    For example, uncertainty can be measured as closeness to 0.5.
+    """
+
+    def compute_scores(self,
+                       variant_predictions: list[ModelPrediction]) -> \
+            list[AcquisitionScore]:
+        scores = [1 - abs(pred.score - 0.5) for pred in variant_predictions]
+        return [AcquisitionScore(variant_id=pred.variant_id, score=score)
+                for pred, score in zip(variant_predictions, scores)]
+
+
+class UncertaintyStrategyFactory(AcquisitionStrategyFactory):
+    def create_instance(self, **kwargs) -> AcquisitionStrategy:
+        return UncertaintyStrategy()
+
+
+class UCBStrategy(AcquisitionStrategy):
+    """
+    Upper Confidence Bound strategy: score = mean + beta * std.
+    """
+
+    def __init__(self, beta: float = 1.0):
+        self.beta = beta
+
+    def compute_scores(self,
+                       variant_predictions: list[ModelPrediction]) -> \
+            list[AcquisitionScore]:
+        scores = []
+        for pred in variant_predictions:
+            std = np.sqrt(pred.variance) if hasattr(pred, "variance") else 0.0
+            ucb_score = pred.score + self.beta * std
+            scores.append(AcquisitionScore(variant_id=pred.variant_id,
+                                           score=ucb_score))
+        return scores
+
+
+class UCBStrategyFactory(AcquisitionStrategyFactory):
+    def create_instance(self, **kwargs) -> AcquisitionStrategy:
+        return UCBStrategy(**kwargs)
+
+
+class DiversityStrategy(AcquisitionStrategy):
+    """
+    Diversity strategy: prefers samples far from the mean embedding.
+    Assumes predictions contain an `embedding` attribute.
+    """
+    def compute_scores(self, variant_predictions: list[ModelPrediction]) -> list[AcquisitionScore]:
+        embeddings = np.array([pred.embedding for pred in variant_predictions])
+        mean_embedding = embeddings.mean(axis=0)
+        distances = np.linalg.norm(embeddings - mean_embedding, axis=1)
+        return [AcquisitionScore(variant_id=pred.variant_id, score=dist)
+                for pred, dist in zip(variant_predictions, distances)]
+
+class DiversityStrategyFactory(AcquisitionStrategyFactory):
+    def create_instance(self, **kwargs) -> AcquisitionStrategy:
+        return DiversityStrategy()
+
+
+class QBCStrategy(AcquisitionStrategy):
+    """
+    Query-by-Committee: acquisition score is committee disagreement (variance).
+    Assumes predictions contain `committee` list of component predictions.
+    """
+    def compute_scores(self, variant_predictions: list[ModelPrediction]) -> list[AcquisitionScore]:
+        scores = []
+        for pred in variant_predictions:
+            if hasattr(pred, "committee") and pred.committee:
+                variance = np.var(pred.committee)
+            else:
+                variance = 0.0
+            scores.append(AcquisitionScore(variant_id=pred.variant_id, score=variance))
+        return scores
+
+
+class QBCStrategyFactory(AcquisitionStrategyFactory):
+    def create_instance(self, **kwargs) -> AcquisitionStrategy:
+        return QBCStrategy()
+
+
+class EIStrategy(AcquisitionStrategy):
+    """
+    Expected Improvement strategy.
+    Assumes predictions contain mean (score) and variance.
+    """
+    def __init__(self, threshold: float = 0.5):
+        self.threshold = threshold
+
+    def compute_scores(self, variant_predictions: list[ModelPrediction]) -> list[AcquisitionScore]:
+        scores = []
+        for pred in variant_predictions:
+            mean = pred.score
+            std = np.sqrt(getattr(pred, "variance", 1e-6))
+            z = (mean - self.threshold) / std
+            phi = 1.0 / np.sqrt(2 * np.pi) * np.exp(-0.5 * z**2)
+            Phi = 0.5 * (1 + np.math.erf(z / np.sqrt(2)))
+            ei = (mean - self.threshold) * Phi + std * phi
+            scores.append(AcquisitionScore(variant_id=pred.variant_id, score=max(ei, 0.0)))
+        return scores
+
+
+class EIStrategyFactory(AcquisitionStrategyFactory):
+    def create_instance(self, **kwargs) -> AcquisitionStrategy:
+        return EIStrategy(**kwargs)
+
+
+class TSStrategy(AcquisitionStrategy):
+    """
+    Thompson Sampling: sample from predictive distribution.
+    Assumes mean = score and variance provided.
+    """
+    def __init__(self, random_state: Optional[int] = None):
+        self._rng = np.random.default_rng(random_state)
+
+    def compute_scores(self, variant_predictions: list[ModelPrediction]) -> list[AcquisitionScore]:
+        scores = []
+        for pred in variant_predictions:
+            mean = pred.score
+            std = np.sqrt(getattr(pred, "variance", 0.0))
+            sample = self._rng.normal(mean, std)
+            scores.append(AcquisitionScore(variant_id=pred.variant_id, score=sample))
+        return scores
+
+
+class TSStrategyFactory(AcquisitionStrategyFactory):
+    def create_instance(self, **kwargs) -> AcquisitionStrategy:
+        return TSStrategy(**kwargs)
+

@@ -3,7 +3,17 @@ from omegaconf import OmegaConf
 from .learner import Learner
 from .strategy import AcquisitionStrategy
 
-from .acquisition_strategy import GreedyStrategyFactory, RandomStrategyFactory
+from .acquisition_strategy import (
+    GreedyStrategyFactory, 
+    RandomStrategyFactory, 
+    UncertaintyStrategyFactory, 
+    UCBStrategyFactory,
+    DiversityStrategyFactory,
+    QBCStrategyFactory, 
+    EIStrategyFactory,
+    TSStrategyFactory,
+
+)
 from .esm_embedder import ESMEmbedder
 
 from .simulator import DESimulator
@@ -28,6 +38,12 @@ class ALDEContainer:
     _acquisition_strategy_factories = {
             "Random": RandomStrategyFactory(),
             "Greedy": GreedyStrategyFactory(),
+            "Uncertainty": UncertaintyStrategyFactory(),
+            "UCB": UCBStrategyFactory(),
+            "Diversity": DiversityStrategyFactory(),
+            "QBC": QBCStrategyFactory(),
+            "EI": EIStrategyFactory(),
+            "TS": TSStrategyFactory(),
         }
 
     def __init__(self, config_file: str = "./config/msalde.yaml"):

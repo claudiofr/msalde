@@ -18,6 +18,28 @@ sub_runs:
       - name: "Greedy"
         parameters: {}
         uses_random_seed: false
+      - name: "Uncertainty"
+        parameters: {}
+        uses_random_seed: false
+      - name: "UCB"
+        parameters:
+          beta: 1.5   #not sure abt this value?
+        uses_random_seed: false
+      - name: "Diversity"
+        parameters: {}
+        uses_random_seed: false
+      - name: "QBC"
+        parameters: {}
+        uses_random_seed: false
+      - name: "EI"
+        parameters:
+          threshold: 0.5   #can be tuned?
+        uses_random_seed: false
+      - name: "TS"
+        parameters:
+          random_state: 42
+        uses_random_seed: true
+
       # - name: "Bald"
       #   parameters: {}
   # - name: "Simulation 2"
