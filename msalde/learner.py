@@ -13,6 +13,7 @@ class Learner:
         self,
         input_dim: Optional[int] = None,
         random_state: Optional[int] = None,
+        scale_embeddings: bool = False,
     ):
         """
         Initialize the base learner.
@@ -30,7 +31,9 @@ class Learner:
         if self._input_dim is not None:
             self._pca = PCA(n_components=self._input_dim,
                             random_state=self._random_state)
-        self._scaler = StandardScaler()
+        self._scaler = None
+        if scale_embeddings:
+            self._scaler = StandardScaler()
 
     def _fit_transform_embeddings(self, embeddings: np.ndarray) -> np.ndarray:
         """
@@ -78,6 +81,8 @@ class Learner:
         Returns:
             Scaled embeddings [n_samples, embedding_dim]
         """
+        if self._scaler is None:
+            return embeddings
         return self._scaler.fit_transform(embeddings)
 
     def _scale_embeddings(self, embeddings: np.ndarray) -> np.ndarray:
@@ -90,6 +95,8 @@ class Learner:
         Returns:
             Scaled embeddings [n_samples, embedding_dim]
         """
+        if self._scaler is None:
+            return embeddings
         return self._scaler.transform(embeddings)
 
     def fit(

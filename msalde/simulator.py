@@ -435,12 +435,42 @@ class DESimulator:
         test_rmse, test_r2, test_spearman_corr = _compute_metrics(
             test_predictions, test_assay_results
         )
-        train_val_predictions = chain(train_predictions,
-                                      validation_predictions)
-        train_val_assay_results = chain(train_assay_results,
-                                        validation_assay_results)
+        train_val_predictions = []
+        train_val_assay_results = []
+        if train_predictions is not None:
+            train_val_predictions.extend(train_predictions)
+            train_val_assay_results.extend(train_assay_results)
+        train_val_predictions.extend(validation_predictions)
+        train_val_assay_results.extend(validation_assay_results)
         _, _, spearman_corr = _compute_metrics(
             train_val_predictions, train_val_assay_results)
+
+        # data validation logic
+        if train_predictions is None:
+            trp = []
+            tra = []
+        else:
+            trp = [v.variant_id for v in train_predictions]
+            tra = [v.variant_id for v in train_assay_results]
+        vp = [v.variant_id for v in validation_predictions]
+        va = [v.variant_id for v in validation_assay_results]
+        if test_predictions is None:
+            tp = []
+            ta = []
+        else:
+            tp = [v.variant_id for v in test_predictions]
+            ta = [v.variant_id for v in test_assay_results]
+        tvp = [v.variant_id for v in train_val_predictions]
+        tva = [v.variant_id for v in train_val_assay_results]
+        test_val = (trp == tra and vp == va and tp == ta and tvp == tva) and \
+                (len(trp) + len(vp)) == len(list(tvp)) and \
+                not any(v in trp for v in vp) and \
+                trp + vp == tvp and \
+                not any(v in tvp for v in tp)
+        lt = len(trp)
+        lv = len(vp)
+        assert test_val, "compute performance metrics failed validation"
+        assert (lt + lv) == len(tvp), "compute performance metrics failed length check"
 
         return PerformanceMetrics(
             train_rmse=train_rmse,
@@ -548,26 +578,43 @@ class DESimulator:
                 )
             round = self._create_round(simulation.id, round_num)
             if round_num == 1:
-                predictions = [ModelPrediction(
+                train_predictions = None
+                remaining_predictions = [ModelPrediction(
                     variant_id=variant.id, score=0.0)
                     for variant in remaining_variants]
+                if len(test_variants) > 0:
+                    test_predictions = [ModelPrediction(
+                        variant_id=variant.id, score=0.0)
+                        for variant in test_variants]
+                else:
+                    test_predictions = None
                 current_round_variant_data = \
                     self._select_top_variants(
                         sub_run_params.first_round_acquisition_strategy,
                         remaining_variants,
-                        predictions,
+                        remaining_predictions,
                         num_selected_variants_first_round,
                         0,
                     )
             else:
-                predictions = self._make_predictions(
+                self._fit_model(sub_run_params.learner, train_variants,
+                                train_assay_results)
+                train_predictions = self._make_predictions(
+                    sub_run_params.learner, train_variants
+                    )
+                remaining_predictions = self._make_predictions(
                     sub_run_params.learner, remaining_variants
                 )
+                if len(test_variants) > 0:
+                    test_predictions = self._make_predictions(
+                        sub_run_params.learner, test_variants)
+                else:
+                    test_predictions = None
                 current_round_variant_data = \
                     self._select_top_variants(
                         sub_run_params.acquisition_strategy,
                         remaining_variants,
-                        predictions,
+                        remaining_predictions,
                         num_top_acquistion_score_variants_per_round,
                         num_top_prediction_score_variants_per_round,
                     )
@@ -578,53 +625,37 @@ class DESimulator:
                 self._get_assay_results_for_variants(
                     current_round_variants, simulation_assay_results
                 )
-            self._save_proposed_variants(
-                round.id,
-                current_round_variant_data,
-                current_round_assay_results,
+            best_variant = self._get_best_variant(
+                current_round_assay_results)
+            remaining_variants_results = self._get_assay_results_for_variants(
+                remaining_variants, simulation_assay_results
+            )
+            top_variants, top_variant_predictions, top_variant_results = \
+                self._get_top_predicted_variants(
+                    train_predictions, train_assay_results,
+                    remaining_predictions,
+                    remaining_variants_results,
+                    simulation_variants,
+                    num_predictions_for_top_n_mean
+                )
+            performance_metrics = self._compute_performance_metrics(
+                train_predictions, train_assay_results,
+                remaining_predictions,
+                remaining_variants_results,
+                test_predictions,
+                test_assay_results,
+                num_predictions_for_top_n_mean
             )
             train_variants.extend(current_round_variants)
             train_assay_results.extend(current_round_assay_results)
             remaining_variants = self._subtract_variant_lists(
                 remaining_variants, current_round_variants
             )
-            remaining_variants_results = self._get_assay_results_for_variants(
-                remaining_variants, simulation_assay_results
+            self._save_proposed_variants(
+                round.id,
+                current_round_variant_data,
+                current_round_assay_results,
             )
-            self._fit_model(sub_run_params.learner, train_variants,
-                            train_assay_results)
-            train_predictions = self._make_predictions(
-                sub_run_params.learner, train_variants
-                )
-            if len(remaining_variants) > 0:
-                remaining_variants_predictions = self._make_predictions(
-                    sub_run_params.learner, remaining_variants
-                    )
-            else:
-                remaining_variants_predictions = None
-            if len(test_variants) > 0:
-                test_predictions = self._make_predictions(
-                    sub_run_params.learner, test_variants)
-            else:
-                test_predictions = None
-            performance_metrics = self._compute_performance_metrics(
-                train_predictions, train_assay_results,
-                remaining_variants_predictions,
-                remaining_variants_results,
-                test_predictions,
-                test_assay_results,
-                num_predictions_for_top_n_mean
-            )
-            best_variant = self._get_best_variant(
-                current_round_assay_results)
-            top_variants, top_variant_predictions, top_variant_results = \
-                self._get_top_predicted_variants(
-                    train_predictions, train_assay_results,
-                    remaining_variants_predictions,
-                    remaining_variants_results,
-                    simulation_variants,
-                    num_predictions_for_top_n_mean
-                )
             self._save_top_variants(round.id, top_variants,
                                     top_variant_predictions,
                                     top_variant_results)
@@ -768,8 +799,12 @@ class DESimulator:
             Tuple of (top_predictions, top_assay_results)
         """
         # Combine all predictions
-        all_predictions = train_predictions.copy()
-        all_assay_results = train_assay_results.copy()
+        if train_predictions:
+            all_predictions = train_predictions.copy()
+            all_assay_results = train_assay_results.copy()
+        else:
+            all_predictions = []
+            all_assay_results = []
         
         if remaining_variants_predictions:
             all_predictions.extend(remaining_variants_predictions)
