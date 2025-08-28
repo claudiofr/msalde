@@ -12,6 +12,7 @@ class VariantDataFileLoader(VariantDataLoader):
     def __init__(self, config):
         super().__init__(config.column_names)
         self._input_path = Path(config.input_path)
+        self._wild_type_id = config.wild_type_id
 
     def load_assay_data(self) -> pd.DataFrame:
         """
@@ -31,5 +32,7 @@ class VariantDataFileLoader(VariantDataLoader):
         for col in column_names:
             if col not in df.columns:
                 raise ValueError(f"CSV file must contain '{col}' column")
+        id_col = self._column_name_mapping["id_col"]
+        df = df[df[id_col] != self._wild_type_id]
 
         return df

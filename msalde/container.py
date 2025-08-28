@@ -1,13 +1,21 @@
 from omegaconf import OmegaConf
 
+from .file_load_embedder import FileLoadEmbedder
+
 from .learner import Learner
 from .strategy import AcquisitionStrategy
 
-from .acquisition_strategy import GreedyStrategyFactory, RandomStrategyFactory
+from .acquisition_strategy import (
+    GreedyStrategyFactory,
+    RandomStrategyFactory
+)
 from .esm_embedder import ESMEmbedder
 
 from .simulator import DESimulator
-from .active_learner import RidgeLearnerFactory
+from .active_learner import (
+    RidgeLearnerFactory,
+    RandomForestLearnerFactory,
+)
 from .data_file_loader import VariantDataFileLoader
 from .repository import (
     ALDERepository,
@@ -24,6 +32,7 @@ class ALDEContainer:
     """
     _learner_factories = {
             "RidgeRegression": RidgeLearnerFactory(),
+            "RandomForestRegression": RandomForestLearnerFactory(),
     }
     _acquisition_strategy_factories = {
             "Random": RandomStrategyFactory(),
@@ -54,7 +63,8 @@ class ALDEContainer:
             config.db.url)
         self._repository = ALDERepository(repo_session_context)
         self._data_loader = VariantDataFileLoader(config.data_loader)
-        self._embedder = ESMEmbedder(config.embedder)
+        # self._embedder = ESMEmbedder(config.embedder)
+        self._embedder = FileLoadEmbedder(config.embedder)
         self._simulator = DESimulator(
             repository=self._repository,
             data_loader=self._data_loader,

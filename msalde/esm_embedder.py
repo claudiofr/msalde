@@ -1,4 +1,6 @@
 import numpy as np
+
+from .model import Variant
 from .embedder import ProteinEmbedder
 from typing import Optional
 
@@ -147,3 +149,16 @@ class ESMEmbedder(ProteinEmbedder):
 
         return all_embeddings
 
+    def embed_variants(self, variants: list[Variant]) -> list[np.ndarray]:
+        """
+        Embed a list of protein variants.
+
+        Args:
+            variants: List of Variant objects
+
+        Returns:
+            List of embedding vectors
+        """
+        sequences = [variant.sequence for variant in variants]
+        embeddings = self.embed_sequences(sequences)
+        return embeddings
