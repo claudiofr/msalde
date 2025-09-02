@@ -8,7 +8,8 @@ data_loader:
     id_col: "variant"
     # name_col: "variant"
     sequence_col: "variant"
-    score_col: "activity_scaled"
+    score_col1: "activity_scaled"
+    score_col: "activity"
 data_loader1:
   input_path: "./test_data/test_assay_small1.csv"
   column_names:
