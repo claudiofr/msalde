@@ -1,3 +1,14 @@
+.shell rm junk.lis
+.output junk.lis
+
+
+create table run_id(id integer primary key);
+delete from run_id;
+
+insert into run_id(id) values( (select max(id) from run_id) );
+-- update run_id set id = 5;
+
+
 select 'mean activity of top n mutants per round with std';
 
 with 
@@ -8,19 +19,12 @@ with
     where rv.round_id = r.id
       and r.simulation_id = s.id
       and s.sub_run_id = sr.id
-      and sr.run_id = (select max(id) from alde_run)
+      and sr.run_id = (select id from run_id)
     group by r.id, r.simulation_id
-  ),
-  round_avg as (
-    select round_num, avg(mean_score) mean_score
-    from round_sim
-    group by round_num
   )
 select rs.round_num, avg(rs.mean_score) mean_score,
-  SQRT(AVG((rs.mean_score - ra.mean_score) * 
-  (rs.mean_score - ra.mean_score))) AS stddev
-from round_sim rs, round_avg ra
-where rs.round_num = ra.round_num
+  stddev(rs.mean_score) stddev
+from round_sim rs
 group by rs.round_num
 order by rs.round_num;
 
@@ -32,50 +36,51 @@ with
   high_activity as (
     select round_num, simulation_id,
     CASE
-      -- WHEN assay_score > 1 THEN 1
-      when assay_score > 0.657676441 then 1
+      WHEN assay_score > 1 THEN 1
+      -- when assay_score > 0.657676441 then 1
       ELSE 0
-    END AS high_activity
+    END AS high_activity,
+    assay_score
     from alde_round_top_variant rv, alde_round r,
       alde_simulation s, alde_sub_run sr
     where rv.round_id = r.id 
       and r.simulation_id = s.id
       and s.sub_run_id = sr.id
-      and sr.run_id = (select max(id) from alde_run)
+      and sr.run_id = (select id from run_id)
   ),
   round_sim as (
     select round_num, simulation_id,
       avg(high_activity) fraction_high_activity
     from high_activity ha
     group by ha.round_num, ha.simulation_id
-  ),
-  round_avg as (
-    select round_num, avg(fraction_high_activity) mean_fha
-    from round_sim
-    group by round_num
   )
 select rs.round_num, avg(rs.fraction_high_activity) mean_fha,
-  SQRT(AVG((rs.fraction_high_activity - ra.mean_fha) * 
-  (rs.fraction_high_activity - ra.mean_fha))) AS stddev
-from round_sim rs, round_avg ra
-where rs.round_num = ra.round_num
+  stddev(rs.fraction_high_activity) stddev
+from round_sim rs
 group by rs.round_num
 order by rs.round_num;
 
-select 'metrics on test fraction';
 
-select round_num, round(t_rmse,4) rmse, round(t_r2,4) r2, round(t_spear,4) spearm
+select 'standard performance metrics';
+
+select round_num, round(t_rmse,3) t_rmse, round(t_r2,3) t_r2, round(t_spear,3) t_spearm,
+  round(tr_rmse,3) tr_rmse, round(tr_r2,3) tr_r2, round(tr_spearm,3) tr_spearm,
+  round(v_rmse,3) v_rmse, round(v_r2,3) v_r2, round(v_spearm,3) v_spearm
 from
 (
-select round_num, avg(train_rmse) tr_rmse, avg(validation_rmse) v_rmse,
+select round_num, simulation_id, avg(train_rmse) tr_rmse,
+  avg(train_r2) tr_r2, avg(train_spearman) tr_spearm,
+  avg(validation_rmse) v_rmse, avg(validation_r2) v_r2,
+  avg(validation_spearman) v_spearm,
   avg(test_rmse) t_rmse, avg(test_r2) t_r2, avg(test_spearman) t_spear
 from alde_round r, alde_simulation s, alde_sub_run sr
 where r.simulation_id = s.id
   and s.sub_run_id = sr.id
-  and sr.run_id = (select max(id) from alde_run)
-group by round_num
+  and sr.run_id = (select id from run_id)
+group by round_num, simulation_id
 )
 order by round_num;
+
 
 select 'top variant per round with std';
 
@@ -87,19 +92,13 @@ with
     where rv.round_id = r.id 
       and r.simulation_id = s.id
       and s.sub_run_id = sr.id
-      and sr.run_id = (select max(id) from alde_run)
+      and sr.run_id = (select id from run_id)
     group by r.id, r.simulation_id
-  ),
-  round_avg as (
-    select round_num, avg(max_score) avg_max_score
-    from round_sim
-    group by round_num
   )
 select rs.round_num, avg(rs.max_score) avg_max_score,
-  SQRT(AVG((rs.max_score - ra.avg_max_score) * 
-  (rs.max_score - ra.avg_max_score))) AS stddev
-from round_sim rs, round_avg ra
-where rs.round_num = ra.round_num
+  stddev(rs.max_score) stddev
+from round_sim rs
 group by rs.round_num
 order by rs.round_num;
 
+.output stdout

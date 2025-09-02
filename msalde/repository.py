@@ -2,6 +2,8 @@ from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from .dbutil import DbExtensionCreator
+
 from .model import PerformanceMetrics
 from .dbmodel import (
     ALDERound, ALDERoundAcquiredVariant, ALDESimulation,
@@ -15,9 +17,12 @@ class RepoSessionContext:
     def init_db(self):
         Base.metadata.create_all(self._engine)
 
+
     def __init__(self, db_url: str):
         self._db_url = db_url
         self._engine = create_engine(db_url)
+        extension_creator = DbExtensionCreator(self._engine)
+        extension_creator.create_extensions()
         self.init_db()
 
     @property
