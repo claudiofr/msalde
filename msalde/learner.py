@@ -99,7 +99,7 @@ class Learner:
             return embeddings
         return self._scaler.transform(embeddings)
 
-    def fit(
+    def fit_model(
         self,
         variants: list[Variant],
         scores: np.ndarray,
@@ -114,6 +114,23 @@ class Learner:
             uncertainties: Optional measurement uncertainties [n_samples]
         """
         raise NotImplementedError("Subclasses must implement fit method")
+
+    def fit(
+        self,
+        variants: list[Variant],
+        scores: np.ndarray,
+        uncertainties: Optional[np.ndarray] = None,
+    ) -> None:
+        """
+        Fit the model.
+
+        Args:
+            embeddings: Protein embeddings [n_samples, embedding_dim]
+            scores: Target scores [n_samples]
+            uncertainties: Optional measurement uncertainties [n_samples]
+        """
+        self._max_train_score = np.max(scores)
+        self.fit_model(variants, scores, uncertainties)
 
     def predict(
         self, variants: list[Variant],
@@ -158,6 +175,10 @@ class Learner:
             model = pickle.load(f)
 
         return model
+
+    @property
+    def max_train_score(self):
+        return self._max_train_score
 
 
 class LearnerFactory:

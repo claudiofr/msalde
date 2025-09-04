@@ -1,7 +1,7 @@
 import numpy as np
 
 from .model import Variant
-from .embedder import ProteinEmbedder
+from .embedder import ProteinEmbedder, ProteinEmbedderFactory
 from typing import Optional
 
 import torch
@@ -27,6 +27,7 @@ class ESMEmbedder(ProteinEmbedder):
             quantize: Whether to quantize the model to FP16/Int8
         """
         self._model_name = config.model_name
+        config = config.parameters
         self._batch_size = config.batch_size
         self._use_pooling = config.use_pooling
 
@@ -38,7 +39,7 @@ class ESMEmbedder(ProteinEmbedder):
 
         # Load tokenizer
         self._tokenizer = AutoTokenizer.from_pretrained(
-            config.model_name, cache_dir=config.cache_dir)
+            self._model_name, cache_dir=config.cache_dir)
 
         # Load model with quantization if requested
         if config.quantize:
@@ -46,7 +47,7 @@ class ESMEmbedder(ProteinEmbedder):
             if self._device == "cuda":
                 # Load in 8-bit precision
                 self._model = AutoModel.from_pretrained(
-                    config.model_name,
+                    self._model_name,
                     cache_dir=config.cache_dir,
                     load_in_8bit=True,
                     device_map="auto",
@@ -54,14 +55,14 @@ class ESMEmbedder(ProteinEmbedder):
             else:
                 # Load in FP16 for CPU
                 self._model = AutoModel.from_pretrained(
-                    config.model_name,
+                    self._model_name,
                     cache_dir=config.cache_dir,
                     torch_dtype=torch.float16,
                 ).to(self._device)
         else:
             # Load in full precision
             self._model = AutoModel.from_pretrained(
-                config.model_name, cache_dir=config.cache_dir).to(
+                self._model_name, cache_dir=config.cache_dir).to(
                 self._device
             )
 
@@ -162,3 +163,9 @@ class ESMEmbedder(ProteinEmbedder):
         sequences = [variant.sequence for variant in variants]
         embeddings = self.embed_sequences(sequences)
         return embeddings
+
+
+class ESMEmbedderFactory(ProteinEmbedderFactory):
+
+    def create_instance(self, config) -> ESMEmbedder:
+        return ESMEmbedder(config)

@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 import pandas as pd
 
-from .data_loader import VariantDataLoader
+from .data_loader import VariantDataLoader, VariantDataLoaderFactory
 
 logger = logging.getLogger(__name__)
 
@@ -36,3 +36,9 @@ class VariantDataFileLoader(VariantDataLoader):
         df = df[df[id_col] != self._wild_type_id]
 
         return df
+
+
+class VariantDataFileLoaderFactory(VariantDataLoaderFactory):
+
+    def create_instance(self, config) -> VariantDataFileLoader:
+        return VariantDataFileLoader(config)

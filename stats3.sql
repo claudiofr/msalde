@@ -1,6 +1,5 @@
 .shell rm junk.lis
-.output junk.lis
-
+-- .output junk.lis
 
 create table run_id(id integer primary key);
 delete from run_id;
@@ -8,11 +7,60 @@ delete from run_id;
 insert into run_id(id) values( (select max(id) from alde_run) );
 -- update run_id set id = 5;
 
-
-create table perf_stats as
+insert into run_metrics(
+  run_id,                     
+  sub_run_id,                 
+  run_name,                   
+  run_descrip,                    
+  config_id,                  
+  data_loader_type,           
+  dataset_name,               
+  embedder_type,              
+  embedder_model_name,        
+  embedder_parameters,        
+  num_simulations,            
+  num_rounds,                 
+  num_variants,               
+  num_variants_first_round,   
+  num_top_acq_var_per_round,  
+  num_top_pred_var_per_round, 
+  num_top_n_pred_per_round,   
+  batch_size,                 
+  test_fraction,              
+  random_seed,                
+  max_assay_score,            
+  binary_score_cutoff,        
+  model_name,                 
+  model_parameters,           
+  first_round_strategy,       
+  first_round_strategy_params,
+  strategy,                   
+  strategy_parameters,        
+  start_ts,                   
+  end_ts,                     
+  end_round_num,              
+  mean_fha,                   
+  mean_fha_rank,              
+  mean_activity,              
+  mean_activity_rank,         
+  max_activity,               
+  max_activity_rank,          
+  train_rmse,                 
+  train_rmse_rank,            
+  train_r2,                   
+  train_r2_rank,              
+  train_spearm,               
+  train_spearm_rank,          
+  val_rmse,                   
+  val_rmse_rank,              
+  val_r2,                     
+  val_r2_rank,                
+  val_spearm,                 
+  val_spearm_rank,            
+  total_rank)
 with 
   high_activity as (
-    select sr.run_id, round_num, simulation_id,
+    select sr.run_id, s.sub_run_id, round_num, simulation_id,
     CASE
       WHEN assay_score > 1 THEN 1
       -- when assay_score > 0.657676441 then 1
@@ -26,11 +74,11 @@ with
     where rv.round_id = r.id 
       and r.simulation_id = s.id
       and s.sub_run_id = sr.id
-      and sr.run_id in (11,10) --(select id from run_id)
+      and sr.run_id in (1,11,10) --(select id from run_id)
       and r.round_num in (5,10)
   ),
   round_sim as (
-    select run_id, round_num, simulation_id,
+    select run_id, sub_run_id, round_num, simulation_id,
       avg(high_activity) fraction_high_activity,
       avg(assay_score) mean_activity,
       max(assay_score) max_activity,
@@ -41,10 +89,10 @@ with
       avg(validation_r2) val_r2,
       avg(validation_spearman) val_spearm
     from high_activity ha
-    group by ha.run_id, ha.round_num, ha.simulation_id
+    group by ha.run_id, ha.sub_run_id, ha.round_num, ha.simulation_id
   ),
   perfs as (
-    select run_id, r.name, rs.round_num, avg(rs.fraction_high_activity) mean_fha,
+    select run_id, rs.sub_run_id, rs.round_num, avg(rs.fraction_high_activity) mean_fha,
         avg(rs.mean_activity) mean_activity,
         avg(rs.max_activity) max_activity,
         avg(rs.train_rmse) train_rmse,
@@ -53,9 +101,8 @@ with
         avg(rs.val_rmse) val_rmse,
         avg(rs.val_r2) val_r2,
         avg(rs.val_spearm) val_spearm
-    from round_sim rs, alde_run r
-    where rs.run_id = r.id
-    group by rs.run_id,r.name,rs.round_num
+    from round_sim rs
+    group by rs.run_id, rs.sub_run_id, rs.round_num
   ),
   ranks as (
     select
@@ -100,7 +147,7 @@ with
   ),
   perf_ranks as (
     select 
-      run_id, name, round_num,
+      run_id, sub_run_id, round_num end_round_num,
       round(mean_fha,3) mean_fha,
       round(mean_fha_rank, 3) as mean_fha_rank,
       round(mean_activity, 3) as mean_activity,
@@ -124,9 +171,61 @@ with
          val_rmse_rank*1.2 + val_r2_rank*1.2 + val_spearm_rank*1.2),3) as total_rank
     from ranks
   )
-select *
-from perf_ranks
-order by round_num, total_rank
+select
+  pr.run_id,                     
+  pr.sub_run_id,                 
+  r.name run_name,                   
+  r.descrip run_descrip,
+  config_id,                  
+  data_loader_type,           
+  dataset_name,               
+  embedder_type,              
+  embedder_model_name,        
+  embedder_parameters,        
+  num_simulations,            
+  num_rounds,                 
+  num_variants,               
+  num_variants_first_round,   
+  num_top_acq_var_per_round,  
+  num_top_pred_var_per_round, 
+  num_top_n_pred_per_round,   
+  batch_size,                 
+  test_fraction,              
+  random_seed,                
+  max_assay_score,            
+  binary_score_cutoff,        
+  model_name,                 
+  model_parameters,           
+  first_round_strategy,       
+  first_round_strategy_params,
+  strategy,                   
+  strategy_parameters,        
+  sr.start_ts,                   
+  sr.end_ts,                     
+  end_round_num,              
+  mean_fha,                   
+  mean_fha_rank,              
+  mean_activity,              
+  mean_activity_rank,         
+  max_activity,               
+  max_activity_rank,          
+  train_rmse,                 
+  train_rmse_rank,            
+  train_r2,                   
+  train_r2_rank,              
+  train_spearm,               
+  train_spearm_rank,          
+  val_rmse,                   
+  val_rmse_rank,              
+  val_r2,                     
+  val_r2_rank,                
+  val_spearm,                 
+  val_spearm_rank,            
+  total_rank
+from perf_ranks pr, alde_run r, alde_sub_run sr
+where pr.sub_run_id = sr.id
+  and pr.run_id = r.id
+order by end_round_num, total_rank
 ;
 
 .output stdout

@@ -33,7 +33,7 @@ class RidgeLearner(Learner):
             random_state=random_state,
         )
 
-    def fit(
+    def fit_model(
         self,
         variants: list[Variant],
         scores: np.ndarray,
@@ -170,8 +170,7 @@ class RandomForestLearner(Learner):
         self._max_samples = max_samples
         self._monotonic_cst = monotonic_cst
 
-
-    def fit(
+    def fit_model(
         self,
         variants: list[Variant],
         scores: np.ndarray,
@@ -250,6 +249,7 @@ class RandomForestLearner(Learner):
         # Make predictions
         has_estimators = hasattr(self._model, "estimators_") and \
             len(self._model.estimators_) > 0
+        # if has_estimators:
         if not has_estimators:
             # Standard prediction
             predicted_scores = self._model.predict(X)

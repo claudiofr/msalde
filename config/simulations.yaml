@@ -1,4 +1,4 @@
-sub_runs:
+c1:
   - name: "Simulation 1"
     description: "First simulation"
     learner1:
@@ -38,6 +38,10 @@ sub_runs:
       parameters: {}
       uses_random_seed: true
     acquisition_strategies:
+      - name: "Random"
+        parameters: {}
+        uses_random_seed: true
+    acquisition_strategies1:
       - name: "Greedy"
         parameters: {}
         uses_random_seed: false

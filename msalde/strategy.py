@@ -1,3 +1,4 @@
+from .learner import Learner
 from .model import ModelPrediction, AcquisitionScore
 
 
@@ -7,6 +8,7 @@ class AcquisitionStrategy:
     """
 
     def compute_scores(self,
+                       fitted_learner: Learner,
                        variant_predictions: list[ModelPrediction]) -> \
             list[AcquisitionScore]:
         pass

@@ -1,35 +1,44 @@
 db:
   url: "sqlite:///./db/msalde.db"
-data_loader:
-  # input_path: "../EvolvePro/output/dms/brenan_labels.csv"
-  input_path: "../EvolvePro/output/dms/cas12f_labels.csv"
-  wild_type_id: "WT"
-  column_names:
-    id_col: "variant"
-    # name_col: "variant"
-    sequence_col: "variant"
-    score_col1: "activity_scaled"
-    score_col: "activity"
-data_loader1:
-  input_path: "./test_data/test_assay_small1.csv"
-  column_names:
-    id_col: "id"
-    # name_col: "id"
-    sequence_col: "sequence"
-    score_col: "score"
-  sequence_generator:
-    name: single_aa_substitution
-    wt_fasta_file: "./test_data/test_assay_small1.fasta"
-    substitution_col: "variant"
-embedder:
-  # embeddings_file: ../EvolvePro/output/plm/esm/brenan_esm2_t6_8M_UR50D.csv
-  embeddings_file: ../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv
-embedder1:
-  model_name: facebook/esm2_t6_8M_UR50D
-  cache_dir: "./model_cache"
-  device: "cpu"
-  batch_size: 8
-  use_pooling: true
-  quantize: false
 sub_runs:
   config_file: "./config/simulations.yaml"
+c1:
+  data_loader:
+    type: file_loader
+    dataset_name: "cas12f"
+    # input_path: "../EvolvePro/output/dms/brenan_labels.csv"
+    input_path: "../EvolvePro/output/dms/cas12f1_labels.csv"
+    # input_path: "../EvolvePro/output/dms/cas12f_labels.csv"
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant"
+      # name_col: "variant"
+      sequence_col: "variant"
+      score_col1: "activity_scaled"
+      score_col: "activity"
+  data_loader1:
+    input_path: "../EvolvePro/output/dms/brenan1_labels.csv"
+    # input_path: "./test_data/test_assay_small1.csv"
+    column_names:
+      id_col: "id"
+      # name_col: "id"
+      sequence_col: "sequence"
+      score_col: "score"
+    sequence_generator:
+      name: single_aa_substitution
+      wt_fasta_file: "./test_data/test_assay_small1.fasta"
+      substitution_col: "variant"
+  embedder:
+    type: file_loader
+    model_name: esm2_t2_8M_UR50D
+    # embeddings_file: ../EvolvePro/output/plm/esm/brenan1_esm2_t6_8M_UR50D.csv
+    embeddings_file: ../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv
+  embedder1:
+    type: esm
+    model_name: esm2_t2_8M_UR50D
+    parameters:
+      cache_dir: "./model_cache"
+      device: "cpu"
+      batch_size: 8
+      use_pooling: true
+      quantize: false
