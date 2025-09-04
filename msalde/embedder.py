@@ -14,3 +14,10 @@ class ProteinEmbedder:
                         embedding=embedding) for var, embedding in
                 zip(variants, embeddings)]
         return vars
+
+
+class ProteinEmbedderFactory:
+
+    # This method should be overridden by subclasses
+    def create_instance(self, config) -> ProteinEmbedder:
+        raise NotImplementedError("This method should be overridden by subclasses")

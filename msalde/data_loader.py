@@ -65,3 +65,8 @@ class VariantDataLoader:
         return variants, results
 
 
+class VariantDataLoaderFactory:
+
+    # This method should be overridden by subclasses
+    def create_instance(self, config) -> VariantDataLoader:
+        raise NotImplementedError("This method should be overridden by subclasses")

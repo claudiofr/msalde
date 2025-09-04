@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from .embedder import ProteinEmbedder
+from .embedder import ProteinEmbedder, ProteinEmbedderFactory
 from .model import Variant
 
 class FileLoadEmbedder(ProteinEmbedder):
@@ -40,3 +40,8 @@ class FileLoadEmbedder(ProteinEmbedder):
             raise ValueError("Number of embeddings does not match number of variants")
         return embeddings.to_numpy()
 
+
+class FileLoadEmbedderFactory(ProteinEmbedderFactory):
+
+    def create_instance(self, config) -> FileLoadEmbedder:
+        return FileLoadEmbedder(config)

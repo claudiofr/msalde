@@ -1,6 +1,7 @@
 import math
 from sqlalchemy import event
-
+from .dbmodel import RunMetricsView
+from sqlalchemy.orm import sessionmaker
 
 class StdDevExtension:
     def __init__(self):
@@ -35,3 +36,12 @@ class DbExtensionCreator:
         event.listen(self._engine, "connect", register_extensions)
 
 
+class DbViewCreator:
+    def __init__(self, engine):
+        self._engine = engine
+
+    def create_views(self):
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            session.execute(RunMetricsView.sql)
+            session.commit()
