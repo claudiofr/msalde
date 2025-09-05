@@ -58,6 +58,11 @@ class ALDESimulation(Base):
 
     sub_run = relationship("ALDESubRun", back_populates="simulations")
     rounds = relationship("ALDERound", back_populates="simulation")
+    
+    # Added for ROC/PR
+    roc_points = relationship("ROCCurve", back_populates="simulation")
+    pr_points = relationship("PRCurve", back_populates="simulation")
+
 
 
 class ALDERound(Base):
@@ -123,3 +128,24 @@ class ALDERoundTopVariant(Base):
 
     round = relationship("ALDERound", back_populates="round_top_variants")
 
+
+class ROCCurve(Base):
+    __tablename__ = "roc_curve"
+    id = Column(Integer, primary_key=True)
+    simulation_id = Column(Integer, ForeignKey("alde_simulation.id"))
+    fpr = Column(Float, nullable=False)
+    tpr = Column(Float, nullable=False)
+    threshold = Column(Float)
+
+    simulation = relationship("ALDESimulation", back_populates="roc_points")
+
+
+class PRCurve(Base):
+    __tablename__ = "pr_curve"
+    id = Column(Integer, primary_key=True)
+    simulation_id = Column(Integer, ForeignKey("alde_simulation.id"))
+    precision = Column(Float, nullable=False)
+    recall = Column(Float, nullable=False)
+    threshold = Column(Float)
+
+    simulation = relationship("ALDESimulation", back_populates="pr_points")

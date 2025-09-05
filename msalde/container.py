@@ -84,4 +84,9 @@ class ALDEContainer:
     @property
     def simulator(self):
         return self._simulator
+    
+    @property
+    def repository(self):
+        return self._repository
+
 

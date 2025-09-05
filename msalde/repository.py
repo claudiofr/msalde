@@ -1,11 +1,13 @@
 from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+import pandas as pd
 
 from .model import PerformanceMetrics
 from .dbmodel import (
     ALDERound, ALDERoundAcquiredVariant, ALDESimulation,
-    ALDESubRun, Base, ALDERoundTopVariant
+    ALDESubRun, Base, ALDERoundTopVariant,
+    ALDERun, ROCCurve, PRCurve
 )
 from .dbmodel import ALDERun
 
@@ -121,7 +123,7 @@ class ALDERepository:
         sub_run_id,
         simulation_num,
         start_ts,
-    ) -> ALDESubRun:
+    ) -> ALDESimulation: # changed from ALDESubRun to ALDESimulation 
         session = sessionmaker(bind=self._engine)
         with session() as session:
             simulation = ALDESimulation(
@@ -137,8 +139,8 @@ class ALDERepository:
     def end_simulation(self, id, end_ts):
         session = sessionmaker(bind=self._engine)
         with session() as session:
-            sub_run = session.query(ALDESimulation).get(id)
-            sub_run.end_ts = end_ts
+            sub_simulation = session.query(ALDESimulation).get(id)  #renamed sub_run to sub_simulation for less confusion
+            sub_simulation.end_ts = end_ts
             session.commit()
 
     def add_round(self, simulation_id, round_num, start_ts) -> ALDERound:
@@ -237,4 +239,71 @@ class ALDERepository:
             session.commit()
             session.refresh(round_variant)
             return round_variant
+
+
+    def get_roc_metrics(self, simulation_id: int) -> pd.DataFrame:
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            rows = session.query(ROCCurve).filter_by(simulation_id=simulation_id).all()
+            if not rows:
+                return pd.DataFrame()
+            return pd.DataFrame([{
+                "fpr": r.fpr,
+                "tpr": r.tpr,
+                "threshold": r.threshold
+            } for r in rows])
+
+    def get_pr_metrics(self, simulation_id: int) -> pd.DataFrame:
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            rows = session.query(PRCurve).filter_by(simulation_id=simulation_id).all()
+            if not rows:
+                return pd.DataFrame()
+            return pd.DataFrame([{
+                "precision": r.precision,
+                "recall": r.recall,
+                "threshold": r.threshold
+            } for r in rows])
+
+
+    def add_roc_point(
+        self,
+        simulation_id: int,
+        fpr: float,
+        tpr: float,
+        threshold: float = None,
+    ) -> ROCCurve:
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            roc_point = ROCCurve(
+                simulation_id=simulation_id,
+                fpr=fpr,
+                tpr=tpr,
+                threshold=threshold,
+            )
+            session.add(roc_point)
+            session.commit()
+            session.refresh(roc_point)
+            return roc_point
+
+    def add_pr_point(
+        self,
+        simulation_id: int,
+        precision: float,
+        recall: float,
+        threshold: float = None,
+    ) -> PRCurve:
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            pr_point = PRCurve(
+                simulation_id=simulation_id,
+                precision=precision,
+                recall=recall,
+                threshold=threshold,
+            )
+            session.add(pr_point)
+            session.commit()
+            session.refresh(pr_point)
+            return pr_point
+
 
