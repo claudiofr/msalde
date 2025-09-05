@@ -3,6 +3,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import pandas as pd
 
+from .dbutil import DbExtensionCreator, DbViewCreator
+
 from .model import PerformanceMetrics
 from .dbmodel import (
     ALDERound, ALDERoundAcquiredVariant, ALDESimulation,
@@ -15,11 +17,17 @@ from .dbmodel import ALDERun
 class RepoSessionContext:
 
     def init_db(self):
+        # Create all tables
         Base.metadata.create_all(self._engine)
+        # create views
+        view_creator = DbViewCreator(self._engine)
+        view_creator.create_views()
 
     def __init__(self, db_url: str):
         self._db_url = db_url
         self._engine = create_engine(db_url)
+        extension_creator = DbExtensionCreator(self._engine)
+        extension_creator.create_extensions()
         self.init_db()
 
     @property
@@ -40,6 +48,13 @@ class ALDERepository:
         self,
         name: str,
         descrip: str,
+        config_id: str,
+        data_loader_type: str,
+        dataset_name: str,
+        embedder_type: str,
+        embedder_model_name: str,
+        embedder_parameters: dict,
+        num_simulations: int,
         num_rounds: int,
         num_variants: int,
         num_selected_variants_first_round: int,
@@ -56,6 +71,13 @@ class ALDERepository:
             run = ALDERun(
                 name=name,
                 descrip=descrip,
+                config_id=config_id,
+                data_loader_type=data_loader_type,
+                dataset_name=dataset_name,
+                embedder_type=embedder_type,
+                embedder_model_name=embedder_model_name,
+                embedder_parameters=str(embedder_parameters),
+                num_simulations=num_simulations,
                 num_rounds=num_rounds,
                 num_variants=num_variants,
                 num_variants_first_round=

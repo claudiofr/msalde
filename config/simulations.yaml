@@ -1,7 +1,7 @@
-sub_runs:
+c1:
   - name: "Simulation 1"
     description: "First simulation"
-    learner:
+    learner1:
       name: "RidgeRegression"
       uses_embedder: false
       uses_random_seed: false
@@ -10,11 +10,38 @@ sub_runs:
         alpha: 1.0
         num_estimators: 10
         random_state: 42
+    learner:
+      name: "RandomForestRegression"
+      uses_embedder: false
+      uses_random_seed: false
+      parameters:
+        # input_dim: 128
+        random_state: 42
+        n_estimators: 20 #100
+        criterion: friedman_mse
+        max_depth: null
+        min_samples_split: 2
+        min_samples_leaf: 1
+        min_weight_fraction_leaf: 0.0
+        max_features: 1.0
+        max_leaf_nodes: null
+        min_impurity_decrease: 0.0
+        bootstrap: true
+        oob_score: false
+        n_jobs: null
+        verbose: 0
+        warm_start: false
+        ccp_alpha: 0.0
+        max_samples: null
     first_round_acquisition_strategy:
       name: "Random"
       parameters: {}
       uses_random_seed: true
     acquisition_strategies:
+      - name: "Random"
+        parameters: {}
+        uses_random_seed: true
+    acquisition_strategies1:
       - name: "Greedy"
         parameters: {}
         uses_random_seed: false

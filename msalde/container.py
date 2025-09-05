@@ -4,21 +4,19 @@ from .learner import Learner
 from .strategy import AcquisitionStrategy
 
 from .acquisition_strategy import (
-    GreedyStrategyFactory, 
-    RandomStrategyFactory, 
-    UncertaintyStrategyFactory, 
-    UCBStrategyFactory,
-    DiversityStrategyFactory,
-    QBCStrategyFactory, 
-    EIStrategyFactory,
-    TSStrategyFactory,
-
+    GreedyStrategyFactory,
+    RandomStrategyFactory
 )
-from .esm_embedder import ESMEmbedder
+from .esm_embedder import ESMEmbedderFactory
+from .file_load_embedder import FileLoadEmbedderFactory
 
 from .simulator import DESimulator
-from .active_learner import RidgeLearnerFactory
-from .data_file_loader import VariantDataFileLoader
+from .active_learner import (
+    RidgeLearnerFactory,
+    RandomForestLearnerFactory,
+)
+from .data_file_loader import VariantDataFileLoaderFactory
+
 from .repository import (
     ALDERepository,
     RepoSessionContext,
@@ -34,17 +32,19 @@ class ALDEContainer:
     """
     _learner_factories = {
             "RidgeRegression": RidgeLearnerFactory(),
+            "RandomForestRegression": RandomForestLearnerFactory(),
     }
     _acquisition_strategy_factories = {
             "Random": RandomStrategyFactory(),
             "Greedy": GreedyStrategyFactory(),
-            "Uncertainty": UncertaintyStrategyFactory(),
-            "UCB": UCBStrategyFactory(),
-            "Diversity": DiversityStrategyFactory(),
-            "QBC": QBCStrategyFactory(),
-            "EI": EIStrategyFactory(),
-            "TS": TSStrategyFactory(),
         }
+    _data_loader_factories = {
+        "file_loader": VariantDataFileLoaderFactory(),
+    }
+    _protein_embedder_factories = {
+        "file_loader": FileLoadEmbedderFactory(),
+        "esm": ESMEmbedderFactory(),
+    }
 
     def __init__(self, config_file: str = "./config/msalde.yaml"):
         """
@@ -69,16 +69,15 @@ class ALDEContainer:
         repo_session_context = RepoSessionContext(
             config.db.url)
         self._repository = ALDERepository(repo_session_context)
-        self._data_loader = VariantDataFileLoader(config.data_loader)
-        self._embedder = ESMEmbedder(config.embedder)
         self._simulator = DESimulator(
             repository=self._repository,
-            data_loader=self._data_loader,
-            embedder=self._embedder,
+            data_loader_factories=self._data_loader_factories,
+            protein_embedder_factories=self._protein_embedder_factories,
             learner_factories=self._learner_factories,
             acquisition_strategy_factories=
             self._acquisition_strategy_factories,
-            sub_run_defs=sub_run_config.sub_runs
+            run_config=config,
+            sub_run_config=sub_run_config
         )
 
     @property

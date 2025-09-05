@@ -23,26 +23,31 @@ from .model import (
     SubRunParameters, Variant,
     ModelPrediction
 )
+from .data_loader import VariantDataLoaderFactory
+from .embedder import ProteinEmbedderFactory
 
 
 class DESimulator:
     def __init__(
         self,
-        data_loader: VariantDataLoader,
+        data_loader_factories: dict[str, type[VariantDataLoaderFactory]],
+        protein_embedder_factories: dict[str, type[ProteinEmbedderFactory]],
         repository: ALDERepository,
-        embedder: ProteinEmbedder,
         learner_factories: dict[str, LearnerFactory],
         acquisition_strategy_factories: dict[str, AcquisitionStrategyFactory],
-        sub_run_defs,
+        run_config,
+        sub_run_config
     ):
-        self._data_loader = data_loader
         self._repository = repository
-        self._embedder = embedder
+        self._data_loader_factories = data_loader_factories
+        self._protein_embedder_factories = protein_embedder_factories
         self._learner_factories = learner_factories
         self._acquisition_strategy_factories = acquisition_strategy_factories
-        self._sub_run_defs = sub_run_defs
+        self._run_config = run_config
+        self._sub_run_config = sub_run_config
 
-    def _load_assay_data(self) -> Tuple[list[Variant], list[AssayResult]]:
+    def _load_assay_data(self, data_loader: VariantDataLoader
+                         ) -> Tuple[list[Variant], list[AssayResult]]:
         """
         Loads assay data from the data loader.
         Input file is listed in the config file.
@@ -50,7 +55,7 @@ class DESimulator:
         Returns:
             Tuple of (variants, assay_results)
         """
-        return self._data_loader.load()
+        return data_loader.load()
 
     def _split_assay_data(
         self,
@@ -100,6 +105,13 @@ class DESimulator:
         self,
         name: str,
         descrip: str,
+        config_id: str,
+        data_loader_type: str,
+        dataset_name: str,
+        embedder_type: str,
+        embedder_model_name: str,
+        embedder_parameters: dict,
+        num_simulations: int,
         num_rounds: int,
         num_variants: int,
         num_selected_variants_first_round: int,
@@ -108,7 +120,7 @@ class DESimulator:
         batch_size: int,
         test_fraction: float,
         random_seed: int,
-        max_assay_score: float
+        max_assay_score: float,
     ) -> ALDERun:
         """
         Creates a new run record in the repository and returns its run_id.
@@ -116,6 +128,13 @@ class DESimulator:
         run = self._repository.add_run(
             name=name,
             descrip=descrip,
+            config_id=config_id,
+            data_loader_type=data_loader_type,
+            dataset_name=dataset_name,
+            embedder_type=embedder_type,
+            embedder_model_name=embedder_model_name,
+            embedder_parameters=embedder_parameters,
+            num_simulations=num_simulations,
             num_rounds=num_rounds,
             num_variants=num_variants,
             num_selected_variants_first_round=
@@ -128,6 +147,7 @@ class DESimulator:
             test_fraction=test_fraction,
             random_seed=random_seed,
             max_assay_score=max_assay_score,
+
             start_ts=datetime.now(),
         )
         return run
@@ -246,18 +266,18 @@ class DESimulator:
 
         return learner.predict(variants)
 
-    def _embed_variants(self, variants: list[Variant]) -> list[Variant]:
+    def _embed_variants(self, embedder: ProteinEmbedder,
+                        variants: list[Variant]) -> list[Variant]:
         """
         Uses the PLM model to embed the given variants and returns the updated list.
         Assumes self._embedder has an 'embed' method that takes a list of Variant and returns a list of Variant with embeddings.
         """
-        if self._embedder is None:
-            return variants
-        return self._embedder.embed_variants(variants)
+        return embedder.embed_variants(variants)
         
     def _select_top_variants(
         self,
         acquisition_strategy: AcquisitionStrategy,
+        learner: Learner,
         variants: list[Variant],
         predictions: list[ModelPrediction],
         num_top_acquisition_variants: int,
@@ -265,27 +285,45 @@ class DESimulator:
 
     ) -> list[SelectedVariant]:
         """
-        Computes acquisition scores for the given variants using the specified acquisition strategy.
+        This method computes acquisition scores for the given variants using
+        the specified acquisition strategy. It selects the top variants based
+        on acquisition scores and, if needed, fills the remaining slots with
+        the highest prediction score variants not already selected. The total
+        number of variants selected is the sum of
+        num_top_acquisition_variants and num_top_prediction_variants.
 
         Args:
-            variants: List of Variant objects.
-            model_predictions: List of model prediction scores for each variant.
-            acquisition_strategy: An object or function with a compute_scores method.
+            acquisition_strategy: An object with a compute_scores method for scoring variants.
+            variants: List of Variant objects to select from.
+            predictions: List of ModelPrediction objects for each variant.
+            num_top_acquisition_variants: Number of variants to select by acquisition score.
+            num_top_prediction_variants: Number of variants to select by prediction score.
 
         Returns:
-            List of acquisition scores (floats), one for each variant.
+            List of SelectedVariant objects, each containing the variant and associated scores.
+
         """
-        acquisition_scores = acquisition_strategy.compute_scores(predictions)
+        # Total number of top variants to select
+        num_top_variants = num_top_acquisition_variants +\
+            num_top_prediction_variants
+        acquisition_scores = acquisition_strategy.compute_scores(learner,
+                                                                 predictions)
         top_acquisition_scores = sorted(
             acquisition_scores, key=lambda x: x.score, reverse=True
         )[:num_top_acquisition_variants]
-        top_predictions = sorted(predictions, key=lambda x: x.score,
-                                    reverse=True
-                                    )[:num_top_prediction_variants]
-
         top_variant_ids = [acq_score.variant_id for acq_score
-                            in top_acquisition_scores] + \
-                            [pred.variant_id for pred in top_predictions]
+                           in top_acquisition_scores]
+        top_excess_predictions = sorted(predictions, key=lambda x: x.score,
+                                 reverse=True
+                          )[:num_top_variants]
+        top_predictions_to_add = [prediction.variant_id for prediction
+                                  in top_excess_predictions
+                                  if prediction.variant_id not in
+                                  top_variant_ids]
+        top_predictions_to_add = top_predictions_to_add[
+            :num_top_variants - len(top_variant_ids)]
+        top_variant_ids += top_predictions_to_add
+
         top_variants_dict = {variant.id: SelectedVariant(variant=variant)
                              for variant in variants
                              if variant.id in top_variant_ids}
@@ -294,37 +332,11 @@ class DESimulator:
                 acq_score
             top_variants_dict[acq_score.variant_id
                               ].top_acquisition_score = True
-        for pred in top_predictions:
-            top_variants_dict[pred.variant_id].prediction = pred
-            top_variants_dict[pred.variant_id].top_prediction = True
+        for pred in top_excess_predictions:
+            if pred.variant_id in top_variants_dict:
+                top_variants_dict[pred.variant_id].prediction = pred
+                top_variants_dict[pred.variant_id].top_prediction = True
         return list(top_variants_dict.values())
-
-    def _select_top_variants1(
-        self,
-        variants: list[Variant],
-        acquisition_scores: list[AcquisitionScore],
-        num_to_select: int
-    ) -> Tuple[list[Variant], list[AcquisitionScore]]:
-        """
-        Selects the top variants based on acquisition scores.
-
-        Args:
-            acquisition_scores: List of AcquisitionScore objects.
-            num_to_select: Number of top variants to select.
-
-        Returns:
-            Tuple of (selected_variants, selected_acquisition_scores)
-        """
-        # Sort acquisition_scores by score in descending order
-        sorted_scores = sorted(acquisition_scores, key=lambda x: x.score,
-                               reverse=True)
-        selected_scores = sorted_scores[:num_to_select]
-        # Get the corresponding variants in the same sorted order
-        # as selected_scores
-        selected_variants = [variant for score in selected_scores
-                             for variant in variants if variant.id
-                             == score.variant_id]
-        return selected_variants, selected_scores
 
     def _get_best_variant(self, assay_results: list[AssayResult]) -> AssayResult:
         """
@@ -435,12 +447,42 @@ class DESimulator:
         test_rmse, test_r2, test_spearman_corr = _compute_metrics(
             test_predictions, test_assay_results
         )
-        train_val_predictions = chain(train_predictions,
-                                      validation_predictions)
-        train_val_assay_results = chain(train_assay_results,
-                                        validation_assay_results)
+        train_val_predictions = []
+        train_val_assay_results = []
+        if train_predictions is not None:
+            train_val_predictions.extend(train_predictions)
+            train_val_assay_results.extend(train_assay_results)
+        train_val_predictions.extend(validation_predictions)
+        train_val_assay_results.extend(validation_assay_results)
         _, _, spearman_corr = _compute_metrics(
             train_val_predictions, train_val_assay_results)
+
+        # data validation logic
+        if train_predictions is None:
+            trp = []
+            tra = []
+        else:
+            trp = [v.variant_id for v in train_predictions]
+            tra = [v.variant_id for v in train_assay_results]
+        vp = [v.variant_id for v in validation_predictions]
+        va = [v.variant_id for v in validation_assay_results]
+        if test_predictions is None:
+            tp = []
+            ta = []
+        else:
+            tp = [v.variant_id for v in test_predictions]
+            ta = [v.variant_id for v in test_assay_results]
+        tvp = [v.variant_id for v in train_val_predictions]
+        tva = [v.variant_id for v in train_val_assay_results]
+        test_val = (trp == tra and vp == va and tp == ta and tvp == tva) and \
+                (len(trp) + len(vp)) == len(list(tvp)) and \
+                not any(v in trp for v in vp) and \
+                trp + vp == tvp and \
+                not any(v in tvp for v in tp)
+        lt = len(trp)
+        lv = len(vp)
+        assert test_val, "compute performance metrics failed validation"
+        assert (lt + lv) == len(tvp), "compute performance metrics failed length check"
 
         return PerformanceMetrics(
             train_rmse=train_rmse,
@@ -455,8 +497,36 @@ class DESimulator:
             spearman=spearman_corr
         )
 
+    def _get_data_loader(self, config_id: str) -> Tuple[
+            str, str, VariantDataLoader]:
+        config = self._run_config[config_id].data_loader
+        if "type" not in config:
+            raise ValueError(f"Data loader type not specified for config {config_id}")
+        data_loader_type = config.type
+        if data_loader_type not in self._data_loader_factories:
+            raise ValueError(f"Unknown data loader type: {data_loader_type}")
+        factory = self._data_loader_factories[data_loader_type]
+        data_loader = factory.create_instance(config)
+        return data_loader_type, config.dataset_name, data_loader
+
+    def _get_embedder(self, config_id: str) -> Tuple[
+            str, str, dict, ProteinEmbedder]:
+        config = self._run_config[config_id].embedder
+        if "type" not in config:
+            raise ValueError(f"Embedder type not specified for config {config_id}")
+        embedder_type = config.type
+        if embedder_type not in self._protein_embedder_factories:
+            raise ValueError(f"Unknown embedder type: {embedder_type}")
+        factory = self._protein_embedder_factories[embedder_type]
+        embedder = factory.create_instance(config)
+        params = None
+        if hasattr(config, 'parameters'):
+            params = config.parameters
+        return embedder_type, config.model_name, params, embedder
+
     def run_simulations(
         self,
+        config_id: str,
         name: str,
         descrip: str = None,
         num_simulations: int = 1,
@@ -468,9 +538,13 @@ class DESimulator:
         test_fraction: float = 0.2,
         random_seed: int = 42,
     ):
+        data_loader_type, dataset_name, data_loader = \
+            self._get_data_loader(config_id)
+        embedder_type, embedder_model_name, embedder_params, embedder \
+            = self._get_embedder(config_id)
 
-        assay_variants, assay_results = self._load_assay_data()
-        assay_variants = self._embed_variants(assay_variants)
+        assay_variants, assay_results = self._load_assay_data(data_loader)
+        assay_variants = self._embed_variants(embedder, assay_variants)
         (
             simulation_variants,
             simulation_assay_results,
@@ -483,6 +557,13 @@ class DESimulator:
         run = self._create_run(
             name,
             descrip,
+            config_id,
+            data_loader_type,
+            dataset_name,
+            embedder_type,
+            embedder_model_name,
+            embedder_params,
+            num_simulations,
             num_rounds,
             len(assay_variants),
             num_selected_variants_first_round,
@@ -491,15 +572,16 @@ class DESimulator:
             0,
             test_fraction,
             random_seed,
-            max_assay_score
+            max_assay_score,
         )
-        sub_runs = self._compile_sub_runs()
+        sub_runs = self._compile_sub_runs(config_id)
 
         for sub_run_params in sub_runs:
             sub_run = self._create_sub_run(run.id, sub_run_params)
             for sumulation_num in range(1, num_simulations + 1):
                 self._init_learners_and_strategies(sub_run_params,
-                                                   sumulation_num)
+                                                   sumulation_num,
+                                                   embedder)
                 self._run_simulation(
                     sub_run.id,
                     sub_run_params,
@@ -548,26 +630,45 @@ class DESimulator:
                 )
             round = self._create_round(simulation.id, round_num)
             if round_num == 1:
-                predictions = [ModelPrediction(
+                train_predictions = None
+                remaining_predictions = [ModelPrediction(
                     variant_id=variant.id, score=0.0)
                     for variant in remaining_variants]
+                if len(test_variants) > 0:
+                    test_predictions = [ModelPrediction(
+                        variant_id=variant.id, score=0.0)
+                        for variant in test_variants]
+                else:
+                    test_predictions = None
                 current_round_variant_data = \
                     self._select_top_variants(
                         sub_run_params.first_round_acquisition_strategy,
+                        sub_run_params.learner,
                         remaining_variants,
-                        predictions,
+                        remaining_predictions,
                         num_selected_variants_first_round,
                         0,
                     )
             else:
-                predictions = self._make_predictions(
+                self._fit_model(sub_run_params.learner, train_variants,
+                                train_assay_results)
+                train_predictions = self._make_predictions(
+                    sub_run_params.learner, train_variants
+                    )
+                remaining_predictions = self._make_predictions(
                     sub_run_params.learner, remaining_variants
                 )
+                if len(test_variants) > 0:
+                    test_predictions = self._make_predictions(
+                        sub_run_params.learner, test_variants)
+                else:
+                    test_predictions = None
                 current_round_variant_data = \
                     self._select_top_variants(
                         sub_run_params.acquisition_strategy,
+                        sub_run_params.learner,
                         remaining_variants,
-                        predictions,
+                        remaining_predictions,
                         num_top_acquistion_score_variants_per_round,
                         num_top_prediction_score_variants_per_round,
                     )
@@ -578,53 +679,37 @@ class DESimulator:
                 self._get_assay_results_for_variants(
                     current_round_variants, simulation_assay_results
                 )
-            self._save_proposed_variants(
-                round.id,
-                current_round_variant_data,
-                current_round_assay_results,
+            best_variant = self._get_best_variant(
+                current_round_assay_results)
+            remaining_variants_results = self._get_assay_results_for_variants(
+                remaining_variants, simulation_assay_results
+            )
+            top_variants, top_variant_predictions, top_variant_results = \
+                self._get_top_predicted_variants(
+                    train_predictions, train_assay_results,
+                    remaining_predictions,
+                    remaining_variants_results,
+                    simulation_variants,
+                    num_predictions_for_top_n_mean
+                )
+            performance_metrics = self._compute_performance_metrics(
+                train_predictions, train_assay_results,
+                remaining_predictions,
+                remaining_variants_results,
+                test_predictions,
+                test_assay_results,
+                num_predictions_for_top_n_mean
             )
             train_variants.extend(current_round_variants)
             train_assay_results.extend(current_round_assay_results)
             remaining_variants = self._subtract_variant_lists(
                 remaining_variants, current_round_variants
             )
-            remaining_variants_results = self._get_assay_results_for_variants(
-                remaining_variants, simulation_assay_results
+            self._save_proposed_variants(
+                round.id,
+                current_round_variant_data,
+                current_round_assay_results,
             )
-            self._fit_model(sub_run_params.learner, train_variants,
-                            train_assay_results)
-            train_predictions = self._make_predictions(
-                sub_run_params.learner, train_variants
-                )
-            if len(remaining_variants) > 0:
-                remaining_variants_predictions = self._make_predictions(
-                    sub_run_params.learner, remaining_variants
-                    )
-            else:
-                remaining_variants_predictions = None
-            if len(test_variants) > 0:
-                test_predictions = self._make_predictions(
-                    sub_run_params.learner, test_variants)
-            else:
-                test_predictions = None
-            performance_metrics = self._compute_performance_metrics(
-                train_predictions, train_assay_results,
-                remaining_variants_predictions,
-                remaining_variants_results,
-                test_predictions,
-                test_assay_results,
-                num_predictions_for_top_n_mean
-            )
-            best_variant = self._get_best_variant(
-                current_round_assay_results)
-            top_variants, top_variant_predictions, top_variant_results = \
-                self._get_top_predicted_variants(
-                    train_predictions, train_assay_results,
-                    remaining_variants_predictions,
-                    remaining_variants_results,
-                    simulation_variants,
-                    num_predictions_for_top_n_mean
-                )
             self._save_top_variants(round.id, top_variants,
                                     top_variant_predictions,
                                     top_variant_results)
@@ -632,11 +717,11 @@ class DESimulator:
                             best_variant)
         self._end_simulation(simulation.id)
 
-    def _compile_sub_runs(self) -> list[SubRunParameters]:
-        """
-        """
+    def _compile_sub_runs(self, config_id: str) -> list[SubRunParameters]:
+
+        sub_run_defs = self._sub_run_config[config_id]
         sub_runs = []
-        for simulation in self._sub_run_defs:
+        for simulation in sub_run_defs:
             for acquisition_strategy_config in \
                     simulation.acquisition_strategies:
                 sub_run_params = SubRunParameters(
@@ -663,7 +748,8 @@ class DESimulator:
 
     def _init_learners_and_strategies(self,
                                       sub_run_params: list[SubRunParameters],
-                                      random_seed: int):
+                                      random_seed: int,
+                                      embedder: ProteinEmbedder):
         """
         Initialize learners and acquisition strategies with proper random seeds.
         
@@ -680,7 +766,7 @@ class DESimulator:
             learner_params['random_state'] = random_seed
 
         if sub_run_params.learner_uses_embedder:
-            learner_params["embedder"] = self._embedder
+            learner_params["embedder"] = embedder
         learner = learner_factory.create_instance(**learner_params)
 
         # Initialize first round acquisition strategy
@@ -712,17 +798,6 @@ class DESimulator:
         sub_run_params.learner = learner
         sub_run_params.first_round_acquisition_strategy = first_round_strategy
         sub_run_params.acquisition_strategy = acquisition_strategy
-
-    def _initialize(self):
-        self._load_simulation_data()
-        self.current_time = self.initial_time
-        self.events = []
-        self.entities = []
-        self.resources = []
-        self.statistics = {}
-        self.status = "stopped"
-        self.log = []
-        self.random_seed = None
 
     def _create_simulation(self, sub_run_id: int, simulation_num: int
                            ) -> ALDESimulation:
@@ -768,8 +843,12 @@ class DESimulator:
             Tuple of (top_predictions, top_assay_results)
         """
         # Combine all predictions
-        all_predictions = train_predictions.copy()
-        all_assay_results = train_assay_results.copy()
+        if train_predictions:
+            all_predictions = train_predictions.copy()
+            all_assay_results = train_assay_results.copy()
+        else:
+            all_predictions = []
+            all_assay_results = []
         
         if remaining_variants_predictions:
             all_predictions.extend(remaining_variants_predictions)
