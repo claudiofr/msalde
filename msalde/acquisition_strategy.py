@@ -188,31 +188,6 @@ class UncertaintyStrategyFactory(AcquisitionStrategyFactory):
         return UncertaintyStrategy()
 
 
-class UCBStrategy(AcquisitionStrategy):
-    """
-    Upper Confidence Bound strategy: score = mean + beta * std.
-    """
-
-    def __init__(self, beta: float = 1.0):
-        self.beta = beta
-
-    def compute_scores(self,
-                       variant_predictions: list[ModelPrediction]) -> \
-            list[AcquisitionScore]:
-        scores = []
-        for pred in variant_predictions:
-            std = np.sqrt(pred.variance) if hasattr(pred, "variance") else 0.0
-            ucb_score = pred.score + self.beta * std
-            scores.append(AcquisitionScore(variant_id=pred.variant_id,
-                                           score=ucb_score))
-        return scores
-
-
-class UCBStrategyFactory(AcquisitionStrategyFactory):
-    def create_instance(self, **kwargs) -> AcquisitionStrategy:
-        return UCBStrategy(**kwargs)
-
-
 class DiversityStrategy(AcquisitionStrategy):
     """
     Diversity strategy: prefers samples far from the mean embedding.
@@ -249,32 +224,6 @@ class QBCStrategy(AcquisitionStrategy):
 class QBCStrategyFactory(AcquisitionStrategyFactory):
     def create_instance(self, **kwargs) -> AcquisitionStrategy:
         return QBCStrategy()
-
-
-class EIStrategy(AcquisitionStrategy):
-    """
-    Expected Improvement strategy.
-    Assumes predictions contain mean (score) and variance.
-    """
-    def __init__(self, threshold: float = 0.5):
-        self.threshold = threshold
-
-    def compute_scores(self, variant_predictions: list[ModelPrediction]) -> list[AcquisitionScore]:
-        scores = []
-        for pred in variant_predictions:
-            mean = pred.score
-            std = np.sqrt(getattr(pred, "variance", 1e-6))
-            z = (mean - self.threshold) / std
-            phi = 1.0 / np.sqrt(2 * np.pi) * np.exp(-0.5 * z**2)
-            Phi = 0.5 * (1 + np.math.erf(z / np.sqrt(2)))
-            ei = (mean - self.threshold) * Phi + std * phi
-            scores.append(AcquisitionScore(variant_id=pred.variant_id, score=max(ei, 0.0)))
-        return scores
-
-
-class EIStrategyFactory(AcquisitionStrategyFactory):
-    def create_instance(self, **kwargs) -> AcquisitionStrategy:
-        return EIStrategy(**kwargs)
 
 
 class TSStrategy(AcquisitionStrategy):
