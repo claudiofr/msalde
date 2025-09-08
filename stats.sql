@@ -14,6 +14,7 @@ select 'mean activity of top n mutants per round with std';
 select '  ';
 
 .header on
+
 with 
   round_sim as (
     select round_num, simulation_id, avg(assay_score) mean_score
@@ -99,6 +100,7 @@ select ' ';
 select 'top variant per round with std';
 select ' ';
 .header on
+
 with 
   round_sim as (
     select round_num, simulation_id, max(assay_score) max_score

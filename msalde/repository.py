@@ -58,6 +58,7 @@ class ALDERepository:
         num_selected_variants_first_round: int,
         num_top_acquistion_score_variants_per_round: int,
         num_top_prediction_score_variants_per_round: int,
+        num_top_predictions_for_top_n_metrics: int,
         batch_size: int,
         test_fraction: float,
         random_seed: int,
@@ -84,6 +85,8 @@ class ALDERepository:
                 num_top_acquistion_score_variants_per_round,
                 num_top_pred_var_per_round=
                 num_top_prediction_score_variants_per_round,
+                num_top_n_pred_per_round=
+                num_top_predictions_for_top_n_metrics,
                 batch_size=batch_size,
                 test_fraction=test_fraction,
                 random_seed=random_seed,
@@ -105,10 +108,13 @@ class ALDERepository:
     def add_sub_run(
         self,
         run_id,
+        learner_type,
         learner_name,
         learner_parameters,
+        first_round_acquisition_strategy_type,
         first_round_acquisition_strategy_name,
         first_round_acquisition_strategy_parameters,
+        acquisition_strategy_type,
         acquisition_strategy_name,
         acquisition_strategy_parameters,
         start_ts,
@@ -116,12 +122,15 @@ class ALDERepository:
         session = sessionmaker(bind=self._engine)
         with session() as session:
             sub_run = ALDESubRun(
+                model_type=learner_type,
                 model_name=learner_name,
                 model_parameters=learner_parameters,
-                first_round_strategy=first_round_acquisition_strategy_name,
+                first_round_strategy_type=first_round_acquisition_strategy_type,
+                first_round_strategy_name=first_round_acquisition_strategy_name,
                 first_round_strategy_params=
                 first_round_acquisition_strategy_parameters,
-                strategy=acquisition_strategy_name,
+                strategy_type=acquisition_strategy_type,
+                strategy_name=acquisition_strategy_name,
                 strategy_parameters=acquisition_strategy_parameters,
                 run_id=run_id,
                 start_ts=start_ts,

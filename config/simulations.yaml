@@ -1,23 +1,23 @@
 c1:
-  - name: "Simulation 1"
+  - name: "RF50"
     description: "First simulation"
     learner1:
+      type: "RidgeRegression"
       name: "RidgeRegression"
       uses_embedder: false
-      uses_random_seed: false
+      uses_random_seed: true
       parameters:
         input_dim: 128
         alpha: 1.0
         num_estimators: 10
-        random_state: 42
     learner:
-      name: "RandomForestRegression"
+      type: "RandomForestRegression"
+      name: "RF50"
       uses_embedder: false
-      uses_random_seed: false
+      uses_random_seed: true
       parameters:
         # input_dim: 128
-        random_state: 42
-        n_estimators: 20 #100
+        n_estimators: 50 #100
         criterion: friedman_mse
         max_depth: null
         min_samples_split: 2
@@ -34,19 +34,86 @@ c1:
         ccp_alpha: 0.0
         max_samples: null
     first_round_acquisition_strategy:
+      type: "Random"
       name: "Random"
       parameters: {}
       uses_random_seed: true
     acquisition_strategies:
-      - name: "Random"
+      - type: "Random"
+        name: "Random"
+        parameters: {}
+        uses_random_seed: true
+      - type: "Greedy"
+        name: "Greedy"
+        parameters: {}
+        uses_random_seed: false
+      - type: "UCB"
+        name: "UCB"
+        parameters:
+          exploration_weight: 1.0
+        uses_random_seed: false
+      - type: "Variance"
+        name: "Variance"
+        parameters: {}
+        uses_random_seed: false
+      - type: "ExpectedImprovement"
+        name: "EI"
+        parameters: {}
+        uses_random_seed: false
+      - type: "ThompsonSampling"
+        name: "TS"
         parameters: {}
         uses_random_seed: true
     acquisition_strategies1:
-      - name: "Greedy"
+      - type: "Greedy"
+        name: "Greedy"
         parameters: {}
         uses_random_seed: false
-      # - name: "Bald"
-      #   parameters: {}
+c2:
+  - name: "C2RF50"
+    description: "First simulation"
+    learner1:
+      type: "RidgeRegression"
+      name: "RR"
+      uses_embedder: false
+      uses_random_seed: true
+      parameters:
+        input_dim: 128
+        alpha: 1.0
+        num_estimators: 10
+    learner:
+      type: "RandomForestRegression"
+      name: "RF10"
+      uses_embedder: false
+      uses_random_seed: true
+      parameters:
+        # input_dim: 128
+        n_estimators: 10 #100
+        criterion: friedman_mse
+        max_depth: null
+        min_samples_split: 2
+        min_samples_leaf: 1
+        min_weight_fraction_leaf: 0.0
+        max_features: 1.0
+        max_leaf_nodes: null
+        min_impurity_decrease: 0.0
+        bootstrap: true
+        oob_score: false
+        n_jobs: null
+        verbose: 0
+        warm_start: false
+        ccp_alpha: 0.0
+        max_samples: null
+    first_round_acquisition_strategy:
+      type: "Random"
+      name: "Rand"
+      parameters: {}
+      uses_random_seed: true
+    acquisition_strategies:
+      - type: "Greedy"
+        name: "Greed"
+        parameters: {}
+        uses_random_seed: false
   # - name: "Simulation 2"
   #   description: "Second simulation"
   #   learner:

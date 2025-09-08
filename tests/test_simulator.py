@@ -6,9 +6,12 @@ from msalde.simulator import DESimulator
 def test_run_simulations(
         de_simulator: DESimulator):
     de_simulator.run_simulations(
-        config_id="c1",
+        #config_id="c1",
+        config_id="c2",
         name="test_run",
-        num_simulations=2,
+        # num_simulations=3,
+        num_simulations=1,
+        # num_rounds=10,
         num_rounds=5,
         num_selected_variants_first_round=16,
         num_top_acquistion_score_variants_per_round=16,

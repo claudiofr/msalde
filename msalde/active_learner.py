@@ -20,17 +20,18 @@ class RidgeLearner(Learner):
     def __init__(
             self,
             input_dim: Optional[int] = None,
-            random_state: Optional[int] = None,
+            random_state1: Optional[int] = None,
+            random_state2: Optional[int] = None,
             alpha: float = 1.0,
             num_estimators: int = 10,
             ):
-        super().__init__(input_dim, random_state)
+        super().__init__(input_dim, random_state1, random_state2)
         self._alpha = alpha
         self._num_estimators = num_estimators
         self._model = BaggingRegressor(
             Ridge(alpha=alpha),
             n_estimators=num_estimators,
-            random_state=random_state,
+            random_state=random_state1,
         )
 
     def fit_model(
@@ -132,7 +133,8 @@ class RandomForestLearner(Learner):
     def __init__(
             self,
             input_dim: Optional[int] = None,
-            random_state: Optional[int] = None,
+            random_state1: Optional[int] = None,
+            random_state2: Optional[int] = None,
             n_estimators=100,
             criterion="squared_error",
             max_depth=None,
@@ -151,7 +153,7 @@ class RandomForestLearner(Learner):
             max_samples=None,
             monotonic_cst=None,
     ):
-        super().__init__(input_dim, random_state)
+        super().__init__(input_dim, random_state1, random_state2)
         self._n_estimators = n_estimators
         self._criterion = criterion
         self._max_depth = max_depth
@@ -198,7 +200,7 @@ class RandomForestLearner(Learner):
             bootstrap=self._bootstrap,
             oob_score=self._oob_score,
             n_jobs=self._n_jobs,
-            random_state=self._random_state,
+            random_state=self._random_state1,
             verbose=self._verbose,
             warm_start=self._warm_start,
             ccp_alpha=self._ccp_alpha,

@@ -1,0 +1,12 @@
+bitsandbytes==0.46.1
+numpy==2.3.2
+omegaconf==2.3.0
+pandas==2.3.2
+pytest==8.4.1
+PyYAML==6.0.2
+PyYAML==6.0.2
+scikit_learn==1.7.1
+scipy==1.16.1
+SQLAlchemy==2.0.43
+torch==2.7.1
+transformers==4.55.0

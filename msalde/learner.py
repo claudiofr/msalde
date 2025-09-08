@@ -12,7 +12,8 @@ class Learner:
     def __init__(
         self,
         input_dim: Optional[int] = None,
-        random_state: Optional[int] = None,
+        random_state1: Optional[int] = None,
+        random_state2: Optional[int] = None,
         scale_embeddings: bool = False,
     ):
         """
@@ -24,13 +25,14 @@ class Learner:
             random_state: Random seed
         """
         self._input_dim = input_dim
-        self._random_state = random_state
+        self._random_state1 = random_state1
+        self._random_state2 = random_state2
 
         # Initialize PCA for dimensionality reduction
         self._pca = None
         if self._input_dim is not None:
             self._pca = PCA(n_components=self._input_dim,
-                            random_state=self._random_state)
+                            random_state=self._random_state1)
         self._scaler = None
         if scale_embeddings:
             self._scaler = StandardScaler()
@@ -183,7 +185,7 @@ class Learner:
 
 class LearnerFactory:
 
-    _base_learner_params = ["input_dim", "random_state"]
+    _base_learner_params = ["input_dim", "random_state1", "random_state2"]
 
     # This method should be overridden by subclasses
     def create_instance(self, **kwargs) -> Learner:

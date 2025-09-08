@@ -5,11 +5,12 @@ create table run_id(id integer primary key);
 delete from run_id;
 
 insert into run_id(id) values( (select max(id) from alde_run) );
--- update run_id set id = 5;
+update run_id set id = 5;
 
 insert into run_metrics(
   run_id,                     
-  sub_run_id,                 
+  sub_run_id,
+  name,
   run_name,                   
   run_descrip,                    
   config_id,                  
@@ -74,7 +75,7 @@ with
     where rv.round_id = r.id 
       and r.simulation_id = s.id
       and s.sub_run_id = sr.id
-      and sr.run_id in (1,11,10) --(select id from run_id)
+      and sr.run_id in (select id from run_id)
       and r.round_num in (5,10)
   ),
   round_sim as (
@@ -173,7 +174,13 @@ with
   )
 select
   pr.run_id,                     
-  pr.sub_run_id,                 
+  pr.sub_run_id,
+  sr.model_name||'/'||
+    sr.first_round_strategy_name||'/'||sr.strategy_name||'/'||
+    num_variants_first_round||'/'||
+    num_top_acq_var_per_round||'/'||
+    num_top_pred_var_per_round||'/'||
+    coalesce(num_top_n_pred_per_round,0) as name,
   r.name run_name,                   
   r.descrip run_descrip,
   config_id,                  
@@ -196,9 +203,9 @@ select
   binary_score_cutoff,        
   model_name,                 
   model_parameters,           
-  first_round_strategy,       
+  first_round_strategy_name,       
   first_round_strategy_params,
-  strategy,                   
+  strategy_name,
   strategy_parameters,        
   sr.start_ts,                   
   sr.end_ts,                     
@@ -221,7 +228,10 @@ select
   val_r2_rank,                
   val_spearm,                 
   val_spearm_rank,            
-  total_rank
+  rank() over (
+      partition by round_num
+      order by total_rank asc
+      rows between unbounded preceding and unbounded following) as total_rank
 from perf_ranks pr, alde_run r, alde_sub_run sr
 where pr.sub_run_id = sr.id
   and pr.run_id = r.id
