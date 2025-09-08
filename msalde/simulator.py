@@ -117,6 +117,7 @@ class DESimulator:
         num_selected_variants_first_round: int,
         num_top_acquistion_score_variants_per_round: int,
         num_top_prediction_score_variants_per_round: int,
+        num_top_predictions_for_top_n_metrics: int,
         batch_size: int,
         test_fraction: float,
         random_seed: int,
@@ -143,6 +144,8 @@ class DESimulator:
             num_top_acquistion_score_variants_per_round,
             num_top_prediction_score_variants_per_round=
             num_top_prediction_score_variants_per_round,
+            num_top_predictions_for_top_n_metrics=
+            num_top_predictions_for_top_n_metrics,           
             batch_size=batch_size,
             test_fraction=test_fraction,
             random_seed=random_seed,
@@ -173,11 +176,15 @@ class DESimulator:
             else None
         sub_run = self._repository.add_sub_run(
             run_id=run_id,
+            learner_type=sub_run_params.learner_type,
             learner_name=sub_run_params.learner_name,
             learner_parameters=learner_params,
+            first_round_acquisition_strategy_type=
+            sub_run_params.first_round_acquisition_strategy_type,
             first_round_acquisition_strategy_name=
             sub_run_params.first_round_acquisition_strategy_name,
             first_round_acquisition_strategy_parameters=first_round_strategy_params,
+            acquisition_strategy_type=sub_run_params.acquisition_strategy_type,
             acquisition_strategy_name=sub_run_params.acquisition_strategy_name,
             acquisition_strategy_parameters=strategy_params,
             start_ts=datetime.now(),
@@ -569,6 +576,7 @@ class DESimulator:
             num_selected_variants_first_round,
             num_top_acquistion_score_variants_per_round,
             num_top_prediction_score_variants_per_round,
+            num_predictions_for_top_n_mean,
             0,
             test_fraction,
             random_seed,
@@ -579,9 +587,6 @@ class DESimulator:
         for sub_run_params in sub_runs:
             sub_run = self._create_sub_run(run.id, sub_run_params)
             for sumulation_num in range(1, num_simulations + 1):
-                self._init_learners_and_strategies(sub_run_params,
-                                                   sumulation_num,
-                                                   embedder)
                 self._run_simulation(
                     sub_run.id,
                     sub_run_params,
@@ -595,6 +600,7 @@ class DESimulator:
                     num_top_acquistion_score_variants_per_round,
                     num_top_prediction_score_variants_per_round,
                     num_predictions_for_top_n_mean,
+                    embedder
                 )
 
             self._end_sub_run(sub_run.id)
@@ -614,6 +620,7 @@ class DESimulator:
         num_top_acquistion_score_variants_per_round,
         num_top_prediction_score_variants_per_round,
         num_predictions_for_top_n_mean,
+        embedder: ProteinEmbedder,
     ):
         """
         Runs a single simulation with the given parameters.
@@ -629,6 +636,10 @@ class DESimulator:
                     "No more variants to select. " + "Could not complete round"
                 )
             round = self._create_round(simulation.id, round_num)
+            self._init_learners_and_strategies(sub_run_params,
+                                               simulation_num,
+                                               round_num,
+                                               embedder)
             if round_num == 1:
                 train_predictions = None
                 remaining_predictions = [ModelPrediction(
@@ -725,17 +736,21 @@ class DESimulator:
             for acquisition_strategy_config in \
                     simulation.acquisition_strategies:
                 sub_run_params = SubRunParameters(
+                    learner_type=simulation.learner.type,
                     learner_name=simulation.learner.name,
                     learner_parameters=dict(simulation.learner.parameters),
                     learner_uses_embedder=simulation.learner.uses_embedder,
                     learner_uses_random_seed=
                     simulation.learner.uses_random_seed,
+                    first_round_acquisition_strategy_type=
+                    simulation.first_round_acquisition_strategy.type,
                     first_round_acquisition_strategy_name=
                     simulation.first_round_acquisition_strategy.name,
                     first_round_acquisition_strategy_parameters=
                     dict(simulation.first_round_acquisition_strategy.parameters),
                     first_round_acquisition_strategy_uses_random_seed=
                     simulation.first_round_acquisition_strategy.uses_random_seed,
+                    acquisition_strategy_type=acquisition_strategy_config.type,
                     acquisition_strategy_name=acquisition_strategy_config.name,
                     acquisition_strategy_parameters=
                     dict(acquisition_strategy_config.parameters),
@@ -748,7 +763,8 @@ class DESimulator:
 
     def _init_learners_and_strategies(self,
                                       sub_run_params: list[SubRunParameters],
-                                      random_seed: int,
+                                      simulation_num: int,
+                                      round_num: int,
                                       embedder: ProteinEmbedder):
         """
         Initialize learners and acquisition strategies with proper random seeds.
@@ -759,11 +775,12 @@ class DESimulator:
         """
         # Initialize learner
         learner_factory = self._learner_factories.get(
-            sub_run_params.learner_name)
+            sub_run_params.learner_type)
         learner_params = sub_run_params.learner_parameters.copy()
 
         if sub_run_params.learner_uses_random_seed:
-            learner_params['random_state'] = random_seed
+            learner_params['random_state1'] = simulation_num
+            learner_params['random_state2'] = round_num
 
         if sub_run_params.learner_uses_embedder:
             learner_params["embedder"] = embedder
@@ -771,25 +788,27 @@ class DESimulator:
 
         # Initialize first round acquisition strategy
         first_round_factory = self._acquisition_strategy_factories.get(
-            sub_run_params.first_round_acquisition_strategy_name
+            sub_run_params.first_round_acquisition_strategy_type
         )
         first_round_params = \
             sub_run_params.first_round_acquisition_strategy_parameters.copy()
 
         if sub_run_params.first_round_acquisition_strategy_uses_random_seed:
-            first_round_params['random_state'] = random_seed
+            first_round_params['random_state1'] = simulation_num
+            first_round_params['random_state2'] = round_num
 
         first_round_strategy = first_round_factory.create_instance(
             **first_round_params)
 
         # Initialize acquisition strategy
         strategy_factory = self._acquisition_strategy_factories.get(
-            sub_run_params.acquisition_strategy_name
+            sub_run_params.acquisition_strategy_type
         )
         strategy_params = sub_run_params.acquisition_strategy_parameters.copy()
 
         if sub_run_params.acquisition_strategy_uses_random_seed:
-            strategy_params['random_state'] = random_seed
+            strategy_params['random_state1'] = simulation_num
+            strategy_params['random_state2'] = round_num
 
         acquisition_strategy = strategy_factory.create_instance(
             **strategy_params)

@@ -5,7 +5,11 @@ from .strategy import AcquisitionStrategy
 
 from .acquisition_strategy import (
     GreedyStrategyFactory,
-    RandomStrategyFactory
+    RandomStrategyFactory,
+    UCBStrategyFactory,
+    ThompsonSamplingStrategyFactory,
+    ExpectedImprovementStrategyFactory,
+    VarianceStrategyFactory
 )
 from .esm_embedder import ESMEmbedderFactory
 from .file_load_embedder import FileLoadEmbedderFactory
@@ -14,6 +18,7 @@ from .simulator import DESimulator
 from .active_learner import (
     RidgeLearnerFactory,
     RandomForestLearnerFactory,
+
 )
 from .data_file_loader import VariantDataFileLoaderFactory
 
@@ -37,6 +42,10 @@ class ALDEContainer:
     _acquisition_strategy_factories = {
             "Random": RandomStrategyFactory(),
             "Greedy": GreedyStrategyFactory(),
+            "UCB": UCBStrategyFactory(),
+            "ThompsonSampling": ThompsonSamplingStrategyFactory(),
+            "ExpectedImprovement": ExpectedImprovementStrategyFactory(),
+            "Variance": VarianceStrategyFactory(),
         }
     _data_loader_factories = {
         "file_loader": VariantDataFileLoaderFactory(),

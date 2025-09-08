@@ -1,6 +1,7 @@
 from .learner import Learner
 from .model import AcquisitionScore, ModelPrediction
 from .strategy import AcquisitionStrategy, AcquisitionStrategyFactory
+from .al_util import cantor_pair
 import numpy as np
 from typing import Optional
 
@@ -9,16 +10,17 @@ class RandomStrategy(AcquisitionStrategy):
     """
     A strategy that selects random samples from the dataset.
     """
-    def __init__(self, random_state: Optional[int] = None):
+    def __init__(self, random_state1: Optional[int] = None,
+                 random_state2: Optional[int] = None):
         """
         Initialize the random strategy.
 
         Args:
             random_state: Random seed for reproducibility
         """
-        self._random_state = random_state
-        if random_state is not None:
-            np.random.seed(random_state)    
+        self._random_state = random_state1
+        if random_state1 is not None:
+            np.random.seed(random_state1)
 
     def compute_scores(self,
                        fitted_learner: Learner,
@@ -105,9 +107,6 @@ class VarianceStrategy(AcquisitionStrategy):
     A strategy that selects random samples from the dataset.
     """
 
-    def __init__(self, exploration_weight: float = 1.0):
-        self._exploration_weight = exploration_weight
-
     def compute_scores(self,
                        fitted_learner: Learner,
                        variant_predictions: list[ModelPrediction]) -> \
@@ -124,7 +123,7 @@ class VarianceStrategy(AcquisitionStrategy):
 class VarianceStrategyFactory(AcquisitionStrategyFactory):
 
     def create_instance(self, **kwargs) -> AcquisitionStrategy:
-        return UCBStrategy(**kwargs)
+        return VarianceStrategy(**kwargs)
 
 
 class ExpectedImprovementStrategy(AcquisitionStrategy):
@@ -132,9 +131,6 @@ class ExpectedImprovementStrategy(AcquisitionStrategy):
     """
     A strategy that selects random samples from the dataset.
     """
-
-    def __init__(self, exploration_weight: float = 1.0):
-        self._exploration_weight = exploration_weight
 
     def compute_scores(self,
                        fitted_learner: Learner,
@@ -165,6 +161,48 @@ class ExpectedImprovementStrategyFactory(AcquisitionStrategyFactory):
 
     def create_instance(self, **kwargs) -> AcquisitionStrategy:
         return ExpectedImprovementStrategy(**kwargs)
+
+
+class ThompsonSamplingStrategy(AcquisitionStrategy):
+    """
+    A strategy that selects random samples from the dataset.
+    """
+    def __init__(self, random_state1: Optional[int] = None,
+                 random_state2: Optional[int] = None):
+        """
+        Initialize the random strategy.
+
+        Args:
+            random_state: Random seed for reproducibility
+        """
+        self._random_state = cantor_pair(random_state1, random_state2)
+
+    def compute_scores(self,
+                       fitted_learner: Learner,
+                       variant_predictions: list[ModelPrediction]) -> \
+            list[AcquisitionScore]:
+        """
+        Randomly pick one of the component models and use their predictions as
+        the acquisition scores.
+        These component models would typically be the estimators in an
+        ensemble model.
+        We ignore the predictions from the main ensemble model.
+        """
+        num_components = len(
+            variant_predictions[0].component_predictions)
+        if self._random_state is not None:
+            np.random.seed(self._random_state)
+        random_component_idx = np.random.randint(num_components)
+        return [AcquisitionScore(
+            variant_id=pred.variant_id,
+            score=pred.component_predictions[random_component_idx].score)
+                for pred in variant_predictions]
+
+
+class ThompsonSamplingStrategyFactory(AcquisitionStrategyFactory):
+
+    def create_instance(self, **kwargs) -> AcquisitionStrategy:
+        return ThompsonSamplingStrategy(**kwargs)
 
 
 
