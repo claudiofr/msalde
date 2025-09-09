@@ -1,0 +1,177 @@
+db:
+  url: "sqlite:///./db/msalde.db"
+sub_runs:
+  config_file: "./config/simulationsm.yaml"
+c1:
+  data_loader:
+    type: file_loader
+    dataset_name: "cas12f"
+    # input_path: "../../data/al/dms/brenan_labels.csv"
+    # input_path: "../../data/al/dms/cas12f1_labels.csv"
+    input_path: "../../data/al/dms/cas12f_labels.csv"
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant"
+      # name_col: "variant"
+      sequence_col: "variant"
+      score_col1: "activity_scaled"
+      score_col: "activity"
+  data_loader1:
+    input_path: "../../data/al/dms/brenan1_labels.csv"
+    # input_path: "./test_data/test_assay_small1.csv"
+    column_names:
+      id_col: "id"
+      # name_col: "id"
+      sequence_col: "sequence"
+      score_col: "score"
+    sequence_generator:
+      name: single_aa_substitution
+      wt_fasta_file: "./test_data/test_assay_small1.fasta"
+      substitution_col: "variant"
+  embedder:
+    type: file_loader
+    model_name: esm2_t2_8M_UR50D
+    # embeddings_file: ../../data/al/esm/brenan1_esm2_t6_8M_UR50D.csv
+    embeddings_file: ../../data/al/esm/cas12f_esm2_t6_8M_UR50D.csv
+  embedder1:
+    type: esm
+    model_name: esm2_t2_8M_UR50D
+    parameters:
+      cache_dir: "./model_cache"
+      device: "cpu"
+      batch_size: 8
+      use_pooling: true
+      quantize: false
+c2:
+  data_loader:
+    type: file_loader
+    dataset_name: "cas12f"
+    # input_path: "../../data/al/dms/brenan_labels.csv"
+    input_path: "../../data/al/dms/cas12f1_labels.csv"
+    # input_path: "../../data/al/dms/cas12f_labels.csv"
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant"
+      # name_col: "variant"
+      sequence_col: "variant"
+      score_col1: "activity_scaled"
+      score_col: "activity"
+  embedder:
+    type: file_loader
+    model_name: esm2_t2_8M_UR50D
+    # embeddings_file: ../../data/al/esm/brenan1_esm2_t6_8M_UR50D.csv
+    embeddings_file: ../../data/al/esm/cas12f_esm2_t6_8M_UR50D.csv
+c3:
+  data_loader:
+    type: file_loader
+    dataset_name: "cas12f"
+    # input_path: "../../data/al/dms/brenan_labels.csv"
+    # input_path: "../../data/al/dms/cas12f1_labels.csv"
+    input_path: "../../data/al/dms/cas12f_labels.csv"
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant"
+      # name_col: "variant"
+      sequence_col: "variant"
+      score_col1: "activity_scaled"
+      score_col: "activity"
+  embedder:
+    type: file_loader
+    model_name: esm2_t2_8M_UR50D
+    # embeddings_file: ../../data/al/esm/brenan1_esm2_t6_8M_UR50D.csv
+    embeddings_file: ../../data/al/esm/cas12f_esm2_t6_8M_UR50D.csv
+c4:
+  data_loader:
+    type: file_loader
+    dataset_name: "cas12f"
+    # input_path: "../../data/al/dms/brenan_labels.csv"
+    # input_path: "../../data/al/dms/cas12f1_labels.csv"
+    input_path: "../../data/al/dms/cas12f_labels.csv"
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant"
+      # name_col: "variant"
+      sequence_col: "variant"
+      score_col1: "activity_scaled"
+      score_col: "activity"
+  embedder:
+    type: file_loader
+    model_name: esm2_t2_8M_UR50D
+    # embeddings_file: ../../data/al/esm/brenan1_esm2_t6_8M_UR50D.csv
+    embeddings_file: ../../data/al/esm/cas12f_esm2_t6_8M_UR50D.csv
+c5:
+  data_loader:
+    type: file_loader
+    dataset_name: "cas12f"
+    # input_path: "../../data/al/dms/brenan_labels.csv"
+    # input_path: "../../data/al/dms/cas12f1_labels.csv"
+    input_path: "../../data/al/dms/cas12f_labels.csv"
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant"
+      # name_col: "variant"
+      sequence_col: "variant"
+      score_col1: "activity_scaled"
+      score_col: "activity"
+  embedder:
+    type: file_loader
+    model_name: esm2_t2_8M_UR50D
+    # embeddings_file: ../../data/al/esm/brenan1_esm2_t6_8M_UR50D.csv
+    embeddings_file: ../../data/al/esm/cas12f_esm2_t6_8M_UR50D.csv
+c6:
+  data_loader:
+    type: file_loader
+    dataset_name: "cas12f"
+    # input_path: "../../data/al/dms/brenan_labels.csv"
+    # input_path: "../../data/al/dms/cas12f1_labels.csv"
+    input_path: "../../data/al/dms/cas12f_labels.csv"
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant"
+      # name_col: "variant"
+      sequence_col: "variant"
+      score_col1: "activity_scaled"
+      score_col: "activity"
+  embedder:
+    type: file_loader
+    model_name: esm2_t2_8M_UR50D
+    # embeddings_file: ../../data/al/esm/brenan1_esm2_t6_8M_UR50D.csv
+    embeddings_file: ../../data/al/esm/cas12f_esm2_t6_8M_UR50D.csv
+c7:
+  data_loader:
+    type: file_loader
+    dataset_name: "cas12f"
+    # input_path: "../../data/al/dms/brenan_labels.csv"
+    # input_path: "../../data/al/dms/cas12f1_labels.csv"
+    input_path: "../../data/al/dms/cas12f_labels.csv"
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant"
+      # name_col: "variant"
+      sequence_col: "variant"
+      score_col1: "activity_scaled"
+      score_col: "activity"
+  embedder:
+    type: file_loader
+    model_name: esm2_t2_8M_UR50D
+    # embeddings_file: ../../data/al/esm/brenan1_esm2_t6_8M_UR50D.csv
+    embeddings_file: ../../data/al/esm/cas12f_esm2_t6_8M_UR50D.csv
+c8:
+  data_loader:
+    type: file_loader
+    dataset_name: "cas12f"
+    # input_path: "../../data/al/dms/brenan_labels.csv"
+    # input_path: "../../data/al/dms/cas12f1_labels.csv"
+    input_path: "../../data/al/dms/cas12f_labels.csv"
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant"
+      # name_col: "variant"
+      sequence_col: "variant"
+      score_col1: "activity_scaled"
+      score_col: "activity"
+  embedder:
+    type: file_loader
+    model_name: esm2_t2_8M_UR50D
+    # embeddings_file: ../../data/al/esm/brenan1_esm2_t6_8M_UR50D.csv
+    embeddings_file: ../../data/al/esm/cas12f_esm2_t6_8M_UR50D.csv

@@ -1,0 +1,11 @@
+#!/bin/bash
+#BSUB -P acc_DiseaseGeneCell
+#BSUB -q premium
+#BSUB -n 1
+#BSUB -W 01:00
+#BSUB -e "run${1}.err"
+#BSUB -o "run${1}.out" 
+#BSUB -R span[hosts=1]
+#BSUB -J "job_run{$1}"
+
+python ./scripts/runs/runs.py --config_id $1
