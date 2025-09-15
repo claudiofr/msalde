@@ -4,7 +4,7 @@ import argparse
 
 
 def get_alde_container():
-    return ALDEContainer("../../config/msaldem.yaml")
+    return ALDEContainer("./config/msaldem.yaml")
 
 
 def create_parser():
@@ -17,13 +17,13 @@ def run_simulation1(simulator, configid):
     simulator.run_simulations(
         config_id=configid,
         name="test_run",
-        # num_simulations=3,
-        num_simulations=1,
-        # num_rounds=10,
-        num_rounds=5,
+        num_simulations=3,
+        # num_simulations=1,
+        num_rounds=100,
+        # num_rounds=1,
         num_selected_variants_first_round=16,
-        num_top_acquistion_score_variants_per_round=16,
-        num_top_prediction_score_variants_per_round=16,
+        num_top_acquistion_score_variants_per_round=32,
+        num_top_prediction_score_variants_per_round=0,
         num_predictions_for_top_n_mean=16,
         test_fraction=0, # 0.2,
         #test_fraction=0.2,

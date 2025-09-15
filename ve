@@ -1,4 +1,6 @@
 #!/bin/bash
 #set -x
 source ./venv_msalde/bin/activate
+unset PYTHONPATH
+which python
 
