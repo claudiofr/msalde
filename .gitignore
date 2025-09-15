@@ -2,3 +2,4 @@ demo/output/*
 temp
 **/__pycache__/
 model_cache/
+esm2_model/

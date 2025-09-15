@@ -3,9 +3,9 @@
 #BSUB -q premium
 #BSUB -n 1
 #BSUB -W 01:00
-#BSUB -e "run${1}.err"
-#BSUB -o "run${1}.out" 
+#BSUB -e "run${CONF_ID}.err"
+#BSUB -o "run${CONF_ID}.out" 
 #BSUB -R span[hosts=1]
-#BSUB -J "job_run{$1}"
+#BSUB -J "job_run{$CONF_ID}"
 
-python ./scripts/runs/runs.py --config_id $1
+python ./scripts/runs/runs.py --config_id $CONF_ID

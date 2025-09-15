@@ -251,8 +251,8 @@ class RandomForestLearner(Learner):
         # Make predictions
         has_estimators = hasattr(self._model, "estimators_") and \
             len(self._model.estimators_) > 0
-        # if has_estimators:
-        if not has_estimators:
+        if has_estimators:
+        # if not has_estimators:
             # Standard prediction
             predicted_scores = self._model.predict(X)
             return [ModelPrediction(variant_id=variant.id, score=score) for
