@@ -67,7 +67,7 @@ c3:
     dataset_name: "cas12f"
     # input_path: "../../data/al/dms/brenan_labels.csv"
     # input_path: "../../data/al/dms/cas12f1_labels.csv"
-    input_path: "./data/al/dms/cas12f_labels.csv"
+    input_path: "../../data/al/dms/cas12f_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
