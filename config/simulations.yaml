@@ -124,7 +124,7 @@ c3:
       uses_random_seed: true
       parameters:
         # input_dim: 128
-        n_estimators: 10 #100
+        n_estimators: 100 #100
         criterion: friedman_mse
         max_depth: null
         min_samples_split: 2

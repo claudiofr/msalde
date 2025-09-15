@@ -1,7 +1,7 @@
 db:
   url: "sqlite:///./db/msalde.db"
 sub_runs:
-  config_file: "./config/simulationsm.yaml"
+  config_file: "./config/simulations.yaml"
 c1:
   data_loader:
     type: file_loader
@@ -67,7 +67,7 @@ c3:
     dataset_name: "cas12f"
     # input_path: "../../data/al/dms/brenan_labels.csv"
     # input_path: "../../data/al/dms/cas12f1_labels.csv"
-    input_path: "../../data/al/dms/cas12f_labels.csv"
+    input_path: "./data/al/dms/cas12f_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
@@ -79,7 +79,7 @@ c3:
     type: file_loader
     model_name: esm2_t2_8M_UR50D
     # embeddings_file: ../../data/al/esm/brenan1_esm2_t6_8M_UR50D.csv
-    embeddings_file: ../../data/al/esm/cas12f_esm2_t6_8M_UR50D.csv
+    embeddings_file: ./data/al/esm/cas12f_esm2_t6_8M_UR50D.csv
 c4:
   data_loader:
     type: file_loader
