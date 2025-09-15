@@ -3,9 +3,11 @@
 #BSUB -q premium
 #BSUB -n 1
 #BSUB -W 01:00
-#BSUB -e "run${1}.err"
-#BSUB -o "run${1}.out" 
 #BSUB -R span[hosts=1]
-#BSUB -J "job_run{$1}"
 
-python ./scripts/runs/runs.py --config_id $1
+echo pwd `pwd`
+echo ve $VIRTUAL_ENV
+echo path $PATH
+echo ppath $PYTHONPATH
+
+python ./scripts/runs/runs.py --config_id $CONF_ID
