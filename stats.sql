@@ -5,7 +5,7 @@
 create table run_id(id integer primary key);
 delete from run_id;
 
-insert into run_id(id) values( (select max(id) from run_id) );
+insert into run_id(id) values( (select max(id) from alde_run) );
 -- update run_id set id = 5;
 
 .header off
