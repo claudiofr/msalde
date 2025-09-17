@@ -9,7 +9,7 @@ class FileLoadEmbedder(ProteinEmbedder):
     This class should implement the methods required by the PLMModel interface.
     """
 
-    def __init__(self, config):
+    def __init__(self, embeddings_file: str):
         """
         Initialize the protein embedder.
 
@@ -21,7 +21,7 @@ class FileLoadEmbedder(ProteinEmbedder):
             cache_dir: Directory to cache models
             quantize: Whether to quantize the model to FP16/Int8
         """
-        self._embeddings_file = config.embeddings_file
+        self._embeddings_file = embeddings_file
 
     def _embed_variants(self, variants: list[Variant]) -> list[np.ndarray]:
         """
@@ -43,5 +43,5 @@ class FileLoadEmbedder(ProteinEmbedder):
 
 class FileLoadEmbedderFactory(ProteinEmbedderFactory):
 
-    def create_instance(self, config) -> FileLoadEmbedder:
-        return FileLoadEmbedder(config)
+    def create_instance(self, embeddings_config, dataset_config) -> FileLoadEmbedder:
+        return FileLoadEmbedder(dataset_config.embeddings_file)

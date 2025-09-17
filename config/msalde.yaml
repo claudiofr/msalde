@@ -2,7 +2,29 @@ db:
   url: "sqlite:///./db/msalde.db"
 sub_runs:
   config_file: "./config/simulations.yaml"
+datasets:
+  cas12f:
+    data_loader_type: file_loader
+    input_path: "../EvolvePro/output/dms/cas12f_labels.csv"
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant"
+      sequence_col: "variant"
+      score_col1: "activity_scaled"
+      score_col: "activity"
+    embeddings_file: "../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv"
+  cas12f1:
+    data_loader_type: file_loader
+    input_path: "../EvolvePro/output/dms/cas12f1_labels.csv"
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant"
+      sequence_col: "variant"
+      score_col1: "activity_scaled"
+      score_col: "activity"
+    embeddings_file: "../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv"
 c1:
+  default_dataset: cas12f
   data_loader:
     type: file_loader
     dataset_name: "cas12f"
@@ -28,12 +50,12 @@ c1:
       name: single_aa_substitution
       wt_fasta_file: "./test_data/test_assay_small1.fasta"
       substitution_col: "variant"
-  embedder1:
+  embedder:
     type: file_loader
     model_name: facebook/esm2_t2_8M_UR50D
     # embeddings_file: ../EvolvePro/output/plm/esm/brenan1_esm2_t6_8M_UR50D.csv
     embeddings_file: ../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv
-  embedder:
+  embedder1:
     type: esm
     model_name1: esm2_t2_8M_UR50D
     model_name: facebook/esm2_t33_650M_UR50D
@@ -44,7 +66,8 @@ c1:
       use_pooling: true
       quantize: false
 c2:
-  data_loader:
+  default_dataset: cas12f
+  data_loader1:
     type: file_loader
     dataset_name: "cas12f"
     # input_path: "../EvolvePro/output/dms/brenan_labels.csv"
@@ -61,7 +84,7 @@ c2:
     type: file_loader
     model_name: esm2_t2_8M_UR50D
     # embeddings_file: ../EvolvePro/output/plm/esm/brenan1_esm2_t6_8M_UR50D.csv
-    embeddings_file: ../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv
+    # embeddings_file: ../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv
 c3:
   data_loader:
     type: file_loader

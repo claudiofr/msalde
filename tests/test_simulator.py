@@ -31,7 +31,8 @@ def test_run_simulations(
         num_predictions_for_top_n_mean=16,
         test_fraction=0, # 0.2,
         #test_fraction=0.2,
-        random_seed=42)
+        random_seed=42,
+        dataset_name="cas12f1")
     pass
 
 

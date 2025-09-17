@@ -167,5 +167,5 @@ class ESMEmbedder(ProteinEmbedder):
 
 class ESMEmbedderFactory(ProteinEmbedderFactory):
 
-    def create_instance(self, config) -> ESMEmbedder:
-        return ESMEmbedder(config)
+    def create_instance(self, embedder_config, dataset_config) -> ESMEmbedder:
+        return ESMEmbedder(embedder_config)
