@@ -5,21 +5,10 @@ from msalde.simulator import DESimulator
 
 def test_run_simulations(
         de_simulator: DESimulator):
-    from huggingface_hub import hf_hub_download
 
-    # Download just the model weights
-    #hf_hub_download(repo_id="facebook/esm2_t33_650M_UR50D",
-    #                filename="pytorch_model.bin")
-    from huggingface_hub import snapshot_download
-
-    path = snapshot_download(
-        repo_id="facebook/esm2_t33_650M_UR50D",
-        local_dir="/home/claudiof/esm2_model",
-        local_dir_use_symlinks=False
-    )
     de_simulator.run_simulations(
         #config_id="c1",
-        config_id="c1",
+        config_id="c2",
         name="test_run",
         # num_simulations=3,
         num_simulations=2,
@@ -31,7 +20,8 @@ def test_run_simulations(
         num_predictions_for_top_n_mean=16,
         test_fraction=0, # 0.2,
         #test_fraction=0.2,
-        random_seed=42)
+        random_seed=42,
+        dataset_name="cas12f1")
     pass
 
 
