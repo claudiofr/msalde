@@ -1,0 +1,52 @@
+Sender: LSF System <lsfadmin@lh06c23>
+Subject: Job 200846142: <job_run{$CONF_ID}> in cluster <chimera> Exited
+
+Job <job_run{$CONF_ID}> was submitted from host <li04e04> by user <fratac01> in cluster <chimera> at Tue Sep  9 17:48:52 2025
+Job was executed on host(s) <lh06c23>, in queue <premium>, as user <fratac01> in cluster <chimera> at Tue Sep  9 17:48:57 2025
+</hpc/users/fratac01> was used as the home directory.
+</hpc/users/fratac01/gitrepo/msalde/scripts/runs> was used as the working directory.
+Started at Tue Sep  9 17:48:57 2025
+Terminated at Tue Sep  9 17:49:26 2025
+Results reported at Tue Sep  9 17:49:26 2025
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -P acc_DiseaseGeneCell
+#BSUB -q premium
+#BSUB -n 1
+#BSUB -W 01:00
+#BSUB -e "run${CONF_ID}.err"
+#BSUB -o "run${CONF_ID}.out" 
+#BSUB -R span[hosts=1]
+#BSUB -J "job_run{$CONF_ID}"
+
+python ./scripts/runs/runs.py --config_id $CONF_ID
+
+------------------------------------------------------------
+
+Exited with exit code 2.
+
+Resource usage summary:
+
+    CPU time :                                   0.15 sec.
+    Max Memory :                                 3 MB
+    Average Memory :                             2.56 MB
+    Total Requested Memory :                     3000.00 MB
+    Delta Memory :                               2997.00 MB
+    Max Swap :                                   -
+    Max Processes :                              1
+    Max Threads :                                1
+    Run time :                                   16 sec.
+    Turnaround time :                            34 sec.
+
+The output (if any) follows:
+
+
+
+PS:
+
+Read file <run${CONF_ID}.err> for stderr output of this job.
+

@@ -115,7 +115,7 @@ c2:
         parameters: {}
         uses_random_seed: false
 c3:
-  - name: "C3RF50"
+  - name: "C3RF508M"
     description: "First simulation"
     learner:
       type: "RandomForestRegression"
@@ -125,6 +125,42 @@ c3:
       parameters:
         # input_dim: 128
         n_estimators: 100 #100
+        criterion: friedman_mse
+        max_depth: null
+        min_samples_split: 2
+        min_samples_leaf: 1
+        min_weight_fraction_leaf: 0.0
+        max_features: 1.0
+        max_leaf_nodes: null
+        min_impurity_decrease: 0.0
+        bootstrap: true
+        oob_score: false
+        n_jobs: null
+        verbose: 0
+        warm_start: false
+        ccp_alpha: 0.0
+        max_samples: null
+    first_round_acquisition_strategy:
+      type: "Random"
+      name: "Rnd"
+      parameters: {}
+      uses_random_seed: true
+    acquisition_strategies:
+      - type: "Greedy"
+        name: "Grd"
+        parameters: {}
+        uses_random_seed: false
+c3_1:
+  - name: "C3RF50650M"
+    description: "First simulation"
+    learner:
+      type: "RandomForestRegression"
+      name: "RF100"
+      uses_embedder: false
+      uses_random_seed: true
+      parameters:
+        # input_dim: 128
+        n_estimators: 20 #100 #100
         criterion: friedman_mse
         max_depth: null
         min_samples_split: 2

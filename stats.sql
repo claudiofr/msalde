@@ -146,7 +146,7 @@ group by rs.round_num
 order by rs.round_num;
 
 
-select round_num, 
+select run_id, embedder_model_name model_name, dataset_name, round_num, 
   round(tr_rmse,3) tr_rmse, round(tr_r2,3) tr_r2, round(tr_spearm,3) tr_spearm,
   round(v_rmse,3) v_rmse, round(v_r2,3) v_r2, round(v_spearm,3) v_spearm,
   CASE
@@ -154,7 +154,8 @@ select round_num,
       ELSE
           num_variants_first_round + ((round_num-2) *
           (num_top_acq_var_per_round+num_top_pred_var_per_round))
-    END AS train_size
+    END AS train_size,
+  r.end_ts
 from
 (
 select run_id, round_num, avg(train_rmse) tr_rmse,
@@ -165,11 +166,12 @@ select run_id, round_num, avg(train_rmse) tr_rmse,
 from alde_round r, alde_simulation s, alde_sub_run sr
 where r.simulation_id = s.id
   and s.sub_run_id = sr.id
-  and sr.run_id = (select id from run_id)
+  and sr.run_id > 11 --in (12,13,14) -- = (select id from run_id)
 group by round_num, run_id
 ) m, alde_run r
 where m.run_id = r.id
-order by round_num;
+  and round_num = 2
+order by run_id, round_num;
 
 
 .output stdout
