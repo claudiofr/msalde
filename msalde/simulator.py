@@ -504,19 +504,21 @@ class DESimulator:
             spearman=spearman_corr
         )
 
-    def _get_data_loader(self, config_id: str) -> Tuple[
+    def _get_data_loader(self, config_id: str, dataset_name: str) -> Tuple[
             str, str, VariantDataLoader]:
-        config = self._run_config[config_id].data_loader
-        if "type" not in config:
-            raise ValueError(f"Data loader type not specified for config {config_id}")
-        data_loader_type = config.type
+        if dataset_name is None:
+            dataset_name = self._run_config[config_id].default_dataset
+        config = self._run_config.datasets[dataset_name]
+        if "data_loader_type" not in config:
+            raise ValueError(f"Data loader type not specified for dataset {dataset_name}")
+        data_loader_type = config.data_loader_type
         if data_loader_type not in self._data_loader_factories:
             raise ValueError(f"Unknown data loader type: {data_loader_type}")
         factory = self._data_loader_factories[data_loader_type]
         data_loader = factory.create_instance(config)
-        return data_loader_type, config.dataset_name, data_loader
+        return data_loader_type, data_loader
 
-    def _get_embedder(self, config_id: str) -> Tuple[
+    def _get_embedder(self, config_id: str, dataset_name: str) -> Tuple[
             str, str, dict, ProteinEmbedder]:
         config = self._run_config[config_id].embedder
         if "type" not in config:
@@ -525,7 +527,11 @@ class DESimulator:
         if embedder_type not in self._protein_embedder_factories:
             raise ValueError(f"Unknown embedder type: {embedder_type}")
         factory = self._protein_embedder_factories[embedder_type]
-        embedder = factory.create_instance(config)
+        if dataset_name is None:
+            dataset_name = self._run_config[config_id].default_dataset
+        embedder = factory.create_instance(
+            config,
+            self._run_config.datasets[dataset_name])
         params = None
         if hasattr(config, 'parameters'):
             params = config.parameters
@@ -544,11 +550,12 @@ class DESimulator:
         num_predictions_for_top_n_mean: int = 10,
         test_fraction: float = 0.2,
         random_seed: int = 42,
+        dataset_name: str = None,
     ):
-        data_loader_type, dataset_name, data_loader = \
-            self._get_data_loader(config_id)
+        data_loader_type, data_loader = \
+            self._get_data_loader(config_id, dataset_name)
         embedder_type, embedder_model_name, embedder_params, embedder \
-            = self._get_embedder(config_id)
+            = self._get_embedder(config_id, dataset_name)
 
         assay_variants, assay_results = self._load_assay_data(data_loader)
         assay_variants = self._embed_variants(embedder, assay_variants)

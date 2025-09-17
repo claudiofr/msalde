@@ -1,0 +1,1 @@
+sqlite3 db/msalde.db --init startup.sql
