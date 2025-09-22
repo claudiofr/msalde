@@ -21,7 +21,7 @@ def test_run_simulations(
         test_fraction=0, # 0.2,
         #test_fraction=0.2,
         random_seed=42,
-        dataset_name="cas12f1")
+        dataset_name="cas12f2")
     pass
 
 
