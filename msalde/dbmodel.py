@@ -16,7 +16,7 @@ class ALDERun(Base):
     data_loader_type = Column(String(20), nullable=False)  # e.g., csv, sqlite
     dataset_name = Column(String(100), nullable=False)
     embedder_type = Column(String(20), nullable=False)  # e.g., plm, onehot
-    embedder_model_name = Column(String(100), nullable=False)  # e.g., esm2_t2_8M_UR50D
+    embedder_model_name = Column(String(100), nullable=False)  # e.g., _8M_UR50D
     embedder_parameters = Column(String)
     num_simulations = Column(Integer, nullable=False)  # num_simulations
     num_rounds = Column(Integer, nullable=False)  # num_rounds

@@ -1,0 +1,29 @@
+#!/bin/bash
+#BSUB -P acc_DiseaseGeneCell
+#BSUB -q premium
+#BSUB -n 1
+#BSUB -W 05:00
+#BSUB -R span[hosts=1]
+
+echo pwd `pwd`
+echo ve $VIRTUAL_ENV
+echo path $PATH
+echo ppath $PYTHONPATH
+
+datasets=("brenan" "jones" "stiffler" "haddox" "doud" "giacomelli" "kelsic" "lee" "markin" "cas12f" "cov2_S" "zikv_E")
+num_vars=(6811 7800 4979 12764 10717 7449 1369 10755 1042 7943 1960 9578)
+
+datasets=("brenan" "jones")
+num_vars=(6811 7800)
+datasets=("stiffler" "haddox" "doud" "giacomelli" "kelsic" "lee" "markin" "cas12f" "cov2_S" "zikv_E")
+num_vars=(4979 12764 10717 7449 1369 10755 1042 7943 1960 9578)
+
+
+for i in "${!datasets[@]}"; do
+    dataset="${datasets[$i]}"
+    num_var="${num_vars[$i]}"
+    echo "Processing" $dataset $num_var `date`
+    python ./scripts/runs/runs.py --config_id $CONF_ID --dataset $dataset --num_vars "${num_var}"
+    echo "finished" `date`
+done
+

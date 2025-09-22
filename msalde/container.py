@@ -18,8 +18,12 @@ from .simulator import DESimulator
 from .active_learner import (
     RidgeLearnerFactory,
     RandomForestLearnerFactory,
-
 )
+from .esm_learner import (
+    ESM2RandomForestLearnerFactory,
+    ESM2MLPLearnerFactory
+)
+
 from .data_file_loader import VariantDataFileLoaderFactory
 
 from .repository import (
@@ -38,6 +42,8 @@ class ALDEContainer:
     _learner_factories = {
             "RidgeRegression": RidgeLearnerFactory(),
             "RandomForestRegression": RandomForestLearnerFactory(),
+            "ESM2RandomForestRegression": ESM2RandomForestLearnerFactory(),
+            "ESM2MLPRegression": ESM2MLPLearnerFactory(),
     }
     _acquisition_strategy_factories = {
             "Random": RandomStrategyFactory(),

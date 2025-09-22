@@ -364,6 +364,8 @@ class DESimulator:
         This method should persist the information to the repository or
         database.
         """
+        if not self._run_config.general.store_acquired_variants:
+            return
         for variant, assay_result in zip(variants, assay_results):
             self._repository.add_round_acquired_variant(
                 round_id=round_id,
@@ -643,10 +645,16 @@ class DESimulator:
                     "No more variants to select. " + "Could not complete round"
                 )
             round = self._create_round(simulation.id, round_num)
-            self._init_learners_and_strategies(sub_run_params,
-                                               simulation_num,
-                                               round_num,
-                                               embedder)
+            # Null out to allow potential garbage collection of previous round
+            # objects. Important for large models, ie. esm,
+            # on limited memory systems.
+            learner = None
+            acquisition_strategy = None
+            first_round_acquisition_strategy = None
+            learner, first_round_acquisition_strategy, acquisition_strategy = \
+                self._init_learners_and_strategies(
+                    sub_run_params, simulation_num,
+                    round_num, embedder)
             if round_num == 1:
                 train_predictions = None
                 remaining_predictions = [ModelPrediction(
@@ -660,31 +668,31 @@ class DESimulator:
                     test_predictions = None
                 current_round_variant_data = \
                     self._select_top_variants(
-                        sub_run_params.first_round_acquisition_strategy,
-                        sub_run_params.learner,
+                        first_round_acquisition_strategy,
+                        learner,
                         remaining_variants,
                         remaining_predictions,
                         num_selected_variants_first_round,
                         0,
                     )
             else:
-                self._fit_model(sub_run_params.learner, train_variants,
+                self._fit_model(learner, train_variants,
                                 train_assay_results)
                 train_predictions = self._make_predictions(
-                    sub_run_params.learner, train_variants
+                    learner, train_variants
                     )
                 remaining_predictions = self._make_predictions(
-                    sub_run_params.learner, remaining_variants
+                    learner, remaining_variants
                 )
                 if len(test_variants) > 0:
                     test_predictions = self._make_predictions(
-                        sub_run_params.learner, test_variants)
+                        learner, test_variants)
                 else:
                     test_predictions = None
                 current_round_variant_data = \
                     self._select_top_variants(
-                        sub_run_params.acquisition_strategy,
-                        sub_run_params.learner,
+                        acquisition_strategy,
+                        learner,
                         remaining_variants,
                         remaining_predictions,
                         num_top_acquistion_score_variants_per_round,
@@ -737,7 +745,8 @@ class DESimulator:
 
     def _compile_sub_runs(self, config_id: str) -> list[SubRunParameters]:
 
-        sub_run_defs = self._sub_run_config[config_id]
+        simulation_config_id = self._run_config[config_id].simulation_config_id
+        sub_run_defs = self._sub_run_config[simulation_config_id]
         sub_runs = []
         for simulation in sub_run_defs:
             for acquisition_strategy_config in \
@@ -791,39 +800,42 @@ class DESimulator:
 
         if sub_run_params.learner_uses_embedder:
             learner_params["embedder"] = embedder
-        learner = learner_factory.create_instance(**learner_params)
+        learner = learner_factory.create_instance(
+            **learner_params)
+        first_round_acquisition_strategy = None
+        acquisition_strategy = None
 
-        # Initialize first round acquisition strategy
-        first_round_factory = self._acquisition_strategy_factories.get(
-            sub_run_params.first_round_acquisition_strategy_type
-        )
-        first_round_params = \
-            sub_run_params.first_round_acquisition_strategy_parameters.copy()
+        if round_num == 1:
+            # Initialize first round acquisition strategy
+            first_round_factory = self._acquisition_strategy_factories.get(
+                sub_run_params.first_round_acquisition_strategy_type
+            )
+            first_round_params = \
+                sub_run_params.first_round_acquisition_strategy_parameters.copy()
 
-        if sub_run_params.first_round_acquisition_strategy_uses_random_seed:
-            first_round_params['random_state1'] = simulation_num
-            first_round_params['random_state2'] = round_num
+            if sub_run_params.first_round_acquisition_strategy_uses_random_seed:
+                first_round_params['random_state1'] = simulation_num
+                first_round_params['random_state2'] = round_num
 
-        first_round_strategy = first_round_factory.create_instance(
-            **first_round_params)
+            first_round_acquisition_strategy = \
+                first_round_factory.create_instance(
+                    **first_round_params)
 
-        # Initialize acquisition strategy
-        strategy_factory = self._acquisition_strategy_factories.get(
-            sub_run_params.acquisition_strategy_type
-        )
-        strategy_params = sub_run_params.acquisition_strategy_parameters.copy()
+        else:
+            # Initialize acquisition strategy
+            strategy_factory = self._acquisition_strategy_factories.get(
+                sub_run_params.acquisition_strategy_type
+            )
+            strategy_params = sub_run_params.acquisition_strategy_parameters.copy()
 
-        if sub_run_params.acquisition_strategy_uses_random_seed:
-            strategy_params['random_state1'] = simulation_num
-            strategy_params['random_state2'] = round_num
+            if sub_run_params.acquisition_strategy_uses_random_seed:
+                strategy_params['random_state1'] = simulation_num
+                strategy_params['random_state2'] = round_num
 
-        acquisition_strategy = strategy_factory.create_instance(
-            **strategy_params)
+            acquisition_strategy = strategy_factory.create_instance(
+                **strategy_params)
 
-        # Update sub_run_params with initialized objects
-        sub_run_params.learner = learner
-        sub_run_params.first_round_acquisition_strategy = first_round_strategy
-        sub_run_params.acquisition_strategy = acquisition_strategy
+        return learner, first_round_acquisition_strategy, acquisition_strategy
 
     def _create_simulation(self, sub_run_id: int, simulation_num: int
                            ) -> ALDESimulation:

@@ -2,7 +2,7 @@
 #BSUB -P acc_DiseaseGeneCell
 #BSUB -q premium
 #BSUB -n 1
-#BSUB -W 01:00
+#BSUB -W 03:00
 #BSUB -R span[hosts=1]
 
 echo pwd `pwd`
@@ -10,4 +10,4 @@ echo ve $VIRTUAL_ENV
 echo path $PATH
 echo ppath $PYTHONPATH
 
-python ./scripts/runs/runs.py --config_id $CONF_ID
+python ./scripts/runs/runs.py --config_id $CONF_ID --dataset $DATASET --num_vars $NUM_VARS

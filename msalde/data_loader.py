@@ -34,7 +34,8 @@ class VariantDataLoader:
         assay_data_df = self.load_assay_data()
         id_col = self._column_name_mapping.get("id_col")
         name_col = self._column_name_mapping.get("name_col")
-        sequence_col = self._column_name_mapping.get("sequence_col")
+        sequence_col = self._column_name_mapping.get("sequence_col",
+                                                     "sequence")
         score_col = self._column_name_mapping.get("score_col")
         uncertainty_col = self._column_name_mapping.get("uncertainty_col")
         variants = []
