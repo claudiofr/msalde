@@ -522,7 +522,9 @@ class DESimulator:
 
     def _get_embedder(self, config_id: str, dataset_name: str) -> Tuple[
             str, str, dict, ProteinEmbedder]:
-        config = self._run_config[config_id].embedder
+        config = self._run_config[config_id].get("embedder")
+        if not config:
+            return None, None, None, None
         if "type" not in config:
             raise ValueError(f"Embedder type not specified for config {config_id}")
         embedder_type = config.type
@@ -560,7 +562,8 @@ class DESimulator:
             = self._get_embedder(config_id, dataset_name)
 
         assay_variants, assay_results = self._load_assay_data(data_loader)
-        assay_variants = self._embed_variants(embedder, assay_variants)
+        if embedder:
+            assay_variants = self._embed_variants(embedder, assay_variants)
         (
             simulation_variants,
             simulation_assay_results,

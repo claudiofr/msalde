@@ -422,9 +422,9 @@ c9_1:
         # base_model_name: facebook/esm2_t6_8M_UR50D
         base_model_name: facebook/esm2_t33_650M_UR50D
         use_pooling: true
-        batch_size: 4
-        num_layers_to_unfreeze: 3
-        num_epochs: 5
+        batch_size: 64
+        num_layers_to_unfreeze: 6
+        num_epochs: 10
     first_round_acquisition_strategy:
       type: "Random"
       name: "Rand"
