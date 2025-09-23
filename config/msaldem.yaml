@@ -3,6 +3,8 @@ db:
   url: "sqlite:///./../../data/al/db/msalde.db"
 sub_runs:
   config_file: "./config/simulations.yaml"
+general:
+  store_acquired_variants: false
 datasets:
   brenan:
     data_loader_type: file_loader

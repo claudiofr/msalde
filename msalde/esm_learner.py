@@ -28,21 +28,74 @@ def get_esm_model_and_tokenizer(base_model_name: str):
     return esm_model, esm_tokenizer
 
 
-class ESM2RandomForestLearnerInternal(nn.Module):
+
+import torch
+import torch.nn as nn
+
+class ESM2RandomForestCustomLoss(nn.Module):
+    def __init__(self):
+        super(ESM2RandomForestCustomLoss, self).__init__()
+
+    def forward(self, predictions, targets):
+        # Example: Cubic error instead of squared error
+        loss = torch.mean((predictions - targets) ** 3)
+        return loss
+
+# Usage
+loss_fn = CustomLoss()
+preds = torch.tensor([2.5, 0.0, 2.0])
+targets = torch.tensor([3.0, -0.5, 2.0])
+loss = loss_fn(preds, targets)
+print(loss.item())
+
+
+class ESM2RandomForestLearnerHelper(nn.Module):
 
     def __init__(self,
                  base_model,
-                 num_layers_to_unfreeze: int,
-                 use_pooling: bool):
+                 use_pooling: bool,
+                 n_estimators=100,
+                 criterion="squared_error",
+                 max_depth=None,
+                 min_samples_split=2,
+                 min_samples_leaf=1,
+                 min_weight_fraction_leaf=0.0,
+                 max_features=1.0,
+                 max_leaf_nodes=None,
+                 min_impurity_decrease=0.0,
+                 bootstrap=True,
+                 oob_score=False,
+                 n_jobs=None,
+                 verbose=0,
+                 warm_start=False,
+                 ccp_alpha=0.0,
+                 max_samples=None,
+                 monotonic_cst=None):
         super().__init__()
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._use_pooling = use_pooling
         self._base_model = base_model
-        self._regression_head = nn.Sequential(
-            nn.Linear(self._base_model.config.hidden_size, 128),
-            nn.ReLU(),
-            nn.Linear(128, 1)  # Output a single value for regression
-        ).to(self._device)
+        self._random_forest_head = RandomForestRegressor(
+            n_estimators=n_estimators,
+            criterion=criterion,
+            max_depth=max_depth,
+            min_samples_split=min_samples_split,
+            min_samples_leaf=min_samples_leaf,
+            min_weight_fraction_leaf=min_weight_fraction_leaf,
+            max_features=max_features,
+            max_leaf_nodes=max_leaf_nodes,
+            min_impurity_decrease=min_impurity_decrease,
+            bootstrap=bootstrap,
+            oob_score=oob_score,
+            n_jobs=n_jobs,
+            random_state=random_state1,
+            verbose=verbose,
+            warm_start=warm_start,
+            ccp_alpha=ccp_alpha,
+            max_samples=max_samples,
+            monotonic_cst=monotonic_cst,
+        )
+
 
     def forward(self, input_ids, attention_mask):
         outputs = self._base_model(input_ids=input_ids, attention_mask=attention_mask)
@@ -61,7 +114,7 @@ class ESM2RandomForestLearnerInternal(nn.Module):
             # Use CLS token
             embeddings = embeddings[:, 0]
 
-        return self._regression_head(embeddings)
+        return self._random_forest_head.predict(embeddings)
 
 
 class ESM2MLPLearnerHelper(nn.Module):
@@ -151,21 +204,23 @@ class ESM2Learner(Learner):
         for epoch in range(self._num_epochs):
             print(f"Starting epoch {epoch+1}/{self._num_epochs}")
             total_loss = 0
+            start = time.perf_counter()
             for batch in loader:
                 ids, mask, target = [x.to(self._device) for x in batch]
                 optimizer.zero_grad()
-                start = time.perf_counter()
+                # start = time.perf_counter()
                 output = self._model(ids, mask)
-                end = time.perf_counter()
-                print_elapsed("forward pass", start, end)
+                # end = time.perf_counter()
+                # print_elapsed("forward pass", start, end)
                 loss = loss_fn(output, target)
-                start = time.perf_counter()
+                # start = time.perf_counter()
                 loss.backward()
-                start = time.perf_counter()
-                print_elapsed("backward pass", start, end)
+                # end = time.perf_counter()
+                # print_elapsed("backward pass", start, end)
                 optimizer.step()
                 total_loss += loss.item()
-            print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}")
+            end = time.perf_counter()
+            print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}", start, end)
 
     def predict(
         self,

@@ -35,7 +35,7 @@ def run_simulation_mc(simulator, configid, dataset, num_vars):
     simulator.run_simulations(
         config_id=configid,
         name="test_run",
-        num_simulations=5,
+        num_simulations=3, # 5,
         # num_simulations=1,
         num_rounds=2,
         # num_rounds=1,
