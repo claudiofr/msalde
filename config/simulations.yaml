@@ -376,8 +376,8 @@ c9:
       uses_embedder: false
       uses_random_seed: true
       parameters:
-        # base_model_name: facebook/esm2_t6_8M_UR50D
-        base_model_name: facebook/esm2_t33_650M_UR50D
+        base_model_name: facebook/esm2_t6_8M_UR50D
+        # base_model_name: facebook/esm2_t33_650M_UR50D
         use_pooling: true
         batch_size: 4
         num_layers_to_unfreeze: 2
