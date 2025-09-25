@@ -20,6 +20,7 @@ from .active_learner import (
     RandomForestLearnerFactory,
 )
 from .esm_learner import (
+    ESM2HingeForestLearnerFactory,
     ESM2RandomForestLearnerFactory,
     ESM2MLPLearnerFactory
 )
@@ -44,6 +45,7 @@ class ALDEContainer:
             "RandomForestRegression": RandomForestLearnerFactory(),
             "ESM2RandomForestRegression": ESM2RandomForestLearnerFactory(),
             "ESM2MLPRegression": ESM2MLPLearnerFactory(),
+            "ESM2HingeForestRegression": ESM2HingeForestLearnerFactory()
     }
     _acquisition_strategy_factories = {
             "Random": RandomStrategyFactory(),

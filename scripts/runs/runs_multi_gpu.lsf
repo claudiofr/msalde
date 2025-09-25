@@ -5,6 +5,7 @@
 #BSUB -gpu num=1
 #BSUB -q gpu
 # -R a100
+#BSUB -R h100nvl
 #BSUB -R rusage[mem=6000]
 #BSUB -R span[hosts=1]
 

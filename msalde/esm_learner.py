@@ -5,6 +5,9 @@ import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
 from torch.utils.data import DataLoader, TensorDataset
+from sklearn.ensemble import RandomForestRegressor
+# from quantumforest import QForestRegressor  # Ensure QuantumForest is installed
+from RandomHingeForest import RandomHingeForest, RandomHingeFern
 
 from .model import ModelPrediction, Variant
 from .learner import Learner, LearnerFactory
@@ -14,6 +17,7 @@ from typing import Optional
 def print_elapsed(operation: str, start: float, end: float):
     elapsed = end - start
     print(f"{operation} took {elapsed:.2f} seconds")
+
 
 def get_esm_model_and_tokenizer(base_model_name: str):
     """
@@ -28,32 +32,14 @@ def get_esm_model_and_tokenizer(base_model_name: str):
     return esm_model, esm_tokenizer
 
 
-
-import torch
-import torch.nn as nn
-
-class ESM2RandomForestCustomLoss(nn.Module):
-    def __init__(self):
-        super(ESM2RandomForestCustomLoss, self).__init__()
-
-    def forward(self, predictions, targets):
-        # Example: Cubic error instead of squared error
-        loss = torch.mean((predictions - targets) ** 3)
-        return loss
-
-# Usage
-loss_fn = CustomLoss()
-preds = torch.tensor([2.5, 0.0, 2.0])
-targets = torch.tensor([3.0, -0.5, 2.0])
-loss = loss_fn(preds, targets)
-print(loss.item())
-
-
 class ESM2RandomForestLearnerHelper(nn.Module):
 
     def __init__(self,
-                 base_model,
-                 use_pooling: bool,
+                 input_dim: Optional[int] = None,
+                 random_state1: Optional[int] = None,
+                 random_state2: Optional[int] = None,
+                 base_model=None,
+                 use_pooling: bool = None,
                  n_estimators=100,
                  criterion="squared_error",
                  max_depth=None,
@@ -96,6 +82,41 @@ class ESM2RandomForestLearnerHelper(nn.Module):
             monotonic_cst=monotonic_cst,
         )
 
+    def forward(self, input_ids, attention_mask):
+        outputs = self._base_model(input_ids=input_ids, attention_mask=attention_mask)
+        # Use the CLS token representation
+        # cls_embedding = outputs.last_hidden_state[:, 0, :]  # shape: (batch_size, hidden_size)
+
+        # Get last hidden state
+        embeddings = outputs.last_hidden_state
+        # Apply pooling if requested
+        if self._use_pooling:
+            # Mean pooling (excluding special tokens)
+            embeddings = torch.sum(
+                embeddings * attention_mask.unsqueeze(-1), dim=1
+            ) / torch.sum(attention_mask, dim=1, keepdim=True)
+        else:
+            # Use CLS token
+            embeddings = embeddings[:, 0]
+
+        return torch.tensor(self._random_forest_head.predict(embeddings))
+
+
+class ESM2HingeForestLearnerHelper(nn.Module):
+    def __init__(self,
+                 base_model=None,
+                 use_pooling: bool = None,
+                 num_trees=10,
+                 tree_depth=6):
+        super().__init__()
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._base_model = base_model
+        input_dim = self._base_model.config.hidden_size
+        self._hinge_forest = RandomHingeForest(
+            in_channels=input_dim,
+            out_channels=num_trees,
+            depth=tree_depth).to(self._device)
+        self._use_pooling = use_pooling
 
     def forward(self, input_ids, attention_mask):
         outputs = self._base_model(input_ids=input_ids, attention_mask=attention_mask)
@@ -114,7 +135,42 @@ class ESM2RandomForestLearnerHelper(nn.Module):
             # Use CLS token
             embeddings = embeddings[:, 0]
 
-        return self._random_forest_head.predict(embeddings)
+        forest_outputs = self._hinge_forest(embeddings)
+        return forest_outputs.mean(dim=1, keepdim=False)
+
+
+class ESM2QuantumForestLearnerHelper(nn.Module):
+    def __init__(self,
+                 input_dim: Optional[int] = None,
+                 random_state1: Optional[int] = None,
+                 random_state2: Optional[int] = None,
+                 base_model=None,
+                 use_pooling: bool = None,
+                 n_estimators=100):
+        super().__init__()
+        self._base_model = base_model
+        #self._qforest = QForestRegressor(
+        #    input_dim=self._base_model.config.hidden_size,
+        #    output_dim=1, num_trees=n_estimators)
+
+    def forward(self, input_ids, attention_mask):
+        outputs = self._base_model(input_ids=input_ids, attention_mask=attention_mask)
+        # Use the CLS token representation
+        # cls_embedding = outputs.last_hidden_state[:, 0, :]  # shape: (batch_size, hidden_size)
+
+        # Get last hidden state
+        embeddings = outputs.last_hidden_state
+        # Apply pooling if requested
+        if self._use_pooling:
+            # Mean pooling (excluding special tokens)
+            embeddings = torch.sum(
+                embeddings * attention_mask.unsqueeze(-1), dim=1
+            ) / torch.sum(attention_mask, dim=1, keepdim=True)
+        else:
+            # Use CLS token
+            embeddings = embeddings[:, 0]
+
+        return self._qforest(embeddings)
 
 
 class ESM2MLPLearnerHelper(nn.Module):
@@ -170,6 +226,8 @@ class ESM2Learner(Learner):
         self._num_epochs = num_epochs
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._model = model.to(self._device)
+        self._base_model = base_model.to(self._device)
+        self._num_layers_to_unfreeze = num_layers_to_unfreeze
         # Freeze all layers first
         for param in base_model.parameters():
             param.requires_grad = False
@@ -209,18 +267,24 @@ class ESM2Learner(Learner):
                 ids, mask, target = [x.to(self._device) for x in batch]
                 optimizer.zero_grad()
                 # start = time.perf_counter()
+                ids = ids.to(self._device)
+                mask = mask.to(self._device)
+                target = target.to(self._device)
                 output = self._model(ids, mask)
                 # end = time.perf_counter()
                 # print_elapsed("forward pass", start, end)
                 loss = loss_fn(output, target)
                 # start = time.perf_counter()
                 loss.backward()
+                # for layer in encoder_layers[-self._num_layers_to_unfreeze:]:
+                #     for param in layer.parameters():
+                #         print(f"grad norm: {param.grad.norm().item() if param.grad is not None else 'None'}")
                 # end = time.perf_counter()
                 # print_elapsed("backward pass", start, end)
                 optimizer.step()
                 total_loss += loss.item()
             end = time.perf_counter()
-            print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}", start, end)
+            print_elapsed(f"Epoch {epoch+1}, Loss: {total_loss:.4f}", start, end)
 
     def predict(
         self,
@@ -257,17 +321,76 @@ class ESM2RandomForestLearnerFactory(LearnerFactory):
         Create a RidgeLearner instance with the given parameters.
         """
         base_model_name = kwargs.pop("base_model_name")
-        use_pooling = kwargs.pop("use_pooling")
+        num_layers_to_unfreeze = kwargs.pop("num_layers_to_unfreeze")
+        batch_size = kwargs.pop("batch_size")
+        num_epochs = kwargs.pop("num_epochs")
         # hidden_size = kwargs.pop("hidden_size")
         base_model, tokenizer = get_esm_model_and_tokenizer(
             base_model_name)
-        model = ESM2RandomForestLearnerInternal(
-            base_model, use_pooling)
+        model = ESM2RandomForestLearnerHelper(**kwargs)
 
-        return ESM2Learner(model=model,
-                           base_model=base_model,
-                           tokenizer=tokenizer,
-                           **kwargs)
+        return ESM2Learner(
+            model=model,
+            base_model=base_model,
+            tokenizer=tokenizer,
+            num_layers_to_unfreeze=num_layers_to_unfreeze,
+            batch_size=batch_size,
+            num_epochs=num_epochs)
+
+
+class ESM2HingeForestLearnerFactory(LearnerFactory):
+    """
+    Factory class for creating RidgeLearner instances.
+    This is a placeholder for the actual implementation.
+    """
+    def create_instance(self, **kwargs) -> Learner:
+        """
+        Create a RidgeLearner instance with the given parameters.
+        """
+        base_model_name = kwargs.pop("base_model_name")
+        num_layers_to_unfreeze = kwargs.pop("num_layers_to_unfreeze")
+        batch_size = kwargs.pop("batch_size")
+        num_epochs = kwargs.pop("num_epochs")
+        # hidden_size = kwargs.pop("hidden_size")
+        base_model, tokenizer = get_esm_model_and_tokenizer(
+            base_model_name)
+        model = ESM2HingeForestLearnerHelper(base_model=base_model,
+                                             **kwargs)
+
+        return ESM2Learner(
+            model=model,
+            base_model=base_model,
+            tokenizer=tokenizer,
+            num_layers_to_unfreeze=num_layers_to_unfreeze,
+            batch_size=batch_size,
+            num_epochs=num_epochs)
+
+
+class ESM2QuantumForestLearnerFactory(LearnerFactory):
+    """
+    Factory class for creating RidgeLearner instances.
+    This is a placeholder for the actual implementation.
+    """
+    def create_instance(self, **kwargs) -> Learner:
+        """
+        Create a RidgeLearner instance with the given parameters.
+        """
+        base_model_name = kwargs.pop("base_model_name")
+        num_layers_to_unfreeze = kwargs.pop("num_layers_to_unfreeze")
+        batch_size = kwargs.pop("batch_size")
+        num_epochs = kwargs.pop("num_epochs")
+        # hidden_size = kwargs.pop("hidden_size")
+        base_model, tokenizer = get_esm_model_and_tokenizer(
+            base_model_name)
+        model = ESM2QuantumForestLearnerHelper(**kwargs)
+
+        return ESM2Learner(
+            model=model,
+            base_model=base_model,
+            tokenizer=tokenizer,
+            num_layers_to_unfreeze=num_layers_to_unfreeze,
+            batch_size=batch_size,
+            num_epochs=num_epochs)
 
 
 class ESM2MLPLearnerFactory(LearnerFactory):
@@ -292,4 +415,5 @@ class ESM2MLPLearnerFactory(LearnerFactory):
                            base_model=base_model,
                            tokenizer=tokenizer,
                            **kwargs)
+                                                       
 

@@ -435,3 +435,57 @@ c9_1:
         name: "Greed"
         parameters: {}
         uses_random_seed: false
+c9_2:
+  - name: "C2RF50"
+    description: "First simulation"
+    learner:
+      type: "ESM2HingeForestRegression"
+      name: "RF10"
+      uses_embedder: false
+      uses_random_seed: false
+      parameters:
+        base_model_name: facebook/esm2_t6_8M_UR50D
+        # base_model_name: facebook/esm2_t33_650M_UR50D
+        use_pooling: true
+        batch_size: 4 #64
+        num_layers_to_unfreeze: 2 #6
+        num_epochs: 2 #10
+        num_trees: 10
+        tree_depth: 6
+    first_round_acquisition_strategy:
+      type: "Random"
+      name: "Rand"
+      parameters: {}
+      uses_random_seed: true
+    acquisition_strategies:
+      - type: "Greedy"
+        name: "Greed"
+        parameters: {}
+        uses_random_seed: false
+c9_3:
+  - name: "C2RF50"
+    description: "First simulation"
+    learner:
+      type: "ESM2HingeForestRegression"
+      name: "RF10"
+      uses_embedder: false
+      uses_random_seed: false
+      parameters:
+        #base_model_name: facebook/esm2_t6_8M_UR50D
+        base_model_name: facebook/esm2_t33_650M_UR50D
+        use_pooling: true
+        batch_size: 64
+        num_layers_to_unfreeze: 6
+        num_epochs: 10
+        num_trees: 20
+        tree_depth: 6
+    first_round_acquisition_strategy:
+      type: "Random"
+      name: "Rand"
+      parameters: {}
+      uses_random_seed: true
+    acquisition_strategies:
+      - type: "Greedy"
+        name: "Greed"
+        parameters: {}
+        uses_random_seed: false
