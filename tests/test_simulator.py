@@ -8,7 +8,7 @@ def test_run_simulations(
 
     de_simulator.run_simulations(
         #config_id="c1",
-        config_id="c2",
+        config_id="c2_1",
         name="test_run",
         # num_simulations=3,
         num_simulations=2,

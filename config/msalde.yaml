@@ -88,6 +88,14 @@ c2:
     # embeddings_file: ../EvolvePro/output/plm/esm/brenan1_esm2_t6_8M_UR50D.csv
     # embeddings_file: ../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv
   simulation_config_id: c9
+c2_1:
+  default_dataset: cas12f
+  embedder:
+    type: file_loader
+    model_name: esm2_t6_8M_UR50D
+    # embeddings_file: ../EvolvePro/output/plm/esm/brenan1_esm2_t6_8M_UR50D.csv
+    # embeddings_file: ../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv
+  simulation_config_id: c9_2
 c3:
   data_loader:
     type: file_loader
