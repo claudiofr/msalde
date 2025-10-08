@@ -469,9 +469,10 @@ c9_3:
       type: "ESM2HingeForestRegression"
       name: "RF10"
       uses_embedder: false
-      uses_random_seed: false
+      uses_random_seed: true
       parameters:
         #base_model_name: facebook/esm2_t6_8M_UR50D
+        input_dim: 320
         base_model_name: facebook/esm2_t33_650M_UR50D
         use_pooling: true
         batch_size: 64

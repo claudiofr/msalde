@@ -106,64 +106,18 @@ class ESM2RandomForestLearnerHelper(nn.Module):
 class ESM2HingeForestLearnerHelper(nn.Module):
     def __init__(self,
                  base_model=None,
-                 input_dim: Optional[int] = None,
-                 random_state1: Optional[int] = None,
-                 random_state2: Optional[int] = None,
                  use_pooling: bool = None,
                  num_trees=10,
                  tree_depth=6):
         super().__init__()
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._base_model = base_model.to(self._device)
-        self._input_dim = input_dim
+        self._input_dim = base_model.config.hidden_size
         self._hinge_forest = RandomHingeForest(
-            in_channels=input_dim,
+            in_channels=self._input_dim,
             out_channels=num_trees,
             depth=tree_depth).to(self._device)
         self._use_pooling = use_pooling
-        self._random_state1 = random_state1
-
-        # Initialize PCA for dimensionality reduction
-        self._pca = None
-        if self._input_dim is not None:
-            self._pca = PCA(n_components=self._input_dim,
-                            random_state=self._random_state1)
-
-    def _fit_transform_embeddings(self, embeddings: np.ndarray) -> np.ndarray:
-        """
-        Reduce dimensionality of embeddings.
-
-        Args:
-            embeddings: Protein embeddings [n_samples, embedding_dim]
-
-        Returns:
-            Reduced embeddings [n_samples, reduced_dim]
-        """
-        if self._pca is None:
-            return embeddings
-
-        # Adjust n_components to be no larger than the number of samples
-        num_samples = embeddings.shape[0]
-        if self._input_dim > num_samples - 1:
-            return embeddings
-
-        # Fit PCA
-        return self._pca.fit_transform(embeddings)
-
-    def _transform_embeddings(self, embeddings: np.ndarray) -> np.ndarray:
-        """
-        Reduce dimensionality of embeddings.
-
-        Args:
-            embeddings: Protein embeddings [n_samples, embedding_dim]
-
-        Returns:
-            Reduced embeddings [n_samples, reduced_dim]
-        """
-        if self._pca is None or not hasattr(self._pca, 'components_'):
-            return embeddings
-
-        return self._pca.transform(embeddings)
 
     def forward(self, input_ids, attention_mask):
         outputs = self._base_model(input_ids=input_ids, attention_mask=attention_mask)
@@ -182,10 +136,7 @@ class ESM2HingeForestLearnerHelper(nn.Module):
             # Use CLS token
             embeddings = embeddings[:, 0]
 
-        X = self.fit_transform_embeddings(embeddings.cpu().numpy())
-        X = torch.tensor(X, dtype=torch.float32).to(self._device)
-        print("len embeddings", X.shape)
-        forest_outputs = self._hinge_forest(X) # embeddings)
+        forest_outputs = self._hinge_forest(embeddings)
         print("len outputs", forest_outputs.shape)
         return forest_outputs.mean(dim=1, keepdim=False)
 
