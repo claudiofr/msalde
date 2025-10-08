@@ -70,6 +70,8 @@ class ALDESimulation(Base):
 
     sub_run = relationship("ALDESubRun", back_populates="simulations")
     rounds = relationship("ALDERound", back_populates="simulation")
+    last_round_scores = relationship("ALDELastRoundScore",
+                                     back_populates="simulation")
 
 
 class ALDERound(Base):
@@ -136,6 +138,22 @@ class ALDERoundTopVariant(Base):
     round = relationship("ALDERound", back_populates="round_top_variants")
 
 
+class ALDELastRoundScore(Base):
+    __tablename__ = 'alde_last_round_score'
+    id = Column(Integer, primary_key=True)
+    simulation_id = Column(Integer, ForeignKey('alde_round.id'))
+    variant_id = Column(Integer, nullable=False)
+    assay_score = Column(Float)
+    prediction_score = Column(Float)
+    insert_ts = Column(DateTime)
+
+    __table_args__ = (
+        UniqueConstraint('simulation_id', 'variant_id', name='uix_round_top_variant'),
+    )
+
+    simulation = relationship("ALDESimulation", back_populates="last_round_scores")
+    
+    
 class RunMetrics(Base):
     __tablename__ = 'run_metrics'
     id = Column(Integer, primary_key=True)

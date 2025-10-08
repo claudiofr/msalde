@@ -10,6 +10,7 @@ from .dbmodel import (
     ALDESubRun, Base, ALDERoundTopVariant
 )
 from .dbmodel import ALDERun
+from .dbmodel import ALDELastRoundScore
 
 
 class RepoSessionContext:
@@ -268,4 +269,29 @@ class ALDERepository:
             session.commit()
             session.refresh(round_variant)
             return round_variant
+
+    def add_last_round_score(
+        self,
+        simulation_id: int,
+        variant_id: int,
+        assay_score: float = None,
+        prediction_score: float = None,
+        insert_ts: datetime = None,
+    ) -> ALDELastRoundScore:
+        """
+        Add a row to the alde_last_round_score table for the given simulation.
+        """
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            last_score = ALDELastRoundScore(
+                simulation_id=simulation_id,
+                variant_id=variant_id,
+                assay_score=assay_score,
+                prediction_score=prediction_score,
+                insert_ts=insert_ts,
+            )
+            session.add(last_score)
+            session.commit()
+            session.refresh(last_score)
+            return last_score
 

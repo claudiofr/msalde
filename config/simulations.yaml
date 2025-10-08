@@ -155,7 +155,43 @@ c3_1:
     description: "First simulation"
     learner:
       type: "RandomForestRegression"
-      name: "RF100"
+      name: "RF_AL"
+      uses_embedder: false
+      uses_random_seed: true
+      parameters:
+        # input_dim: 128
+        n_estimators: 20 #100 #100
+        criterion: friedman_mse
+        max_depth: null
+        min_samples_split: 2
+        min_samples_leaf: 1
+        min_weight_fraction_leaf: 0.0
+        max_features: 1.0
+        max_leaf_nodes: null
+        min_impurity_decrease: 0.0
+        bootstrap: true
+        oob_score: false
+        n_jobs: null
+        verbose: 0
+        warm_start: false
+        ccp_alpha: 0.0
+        max_samples: null
+    first_round_acquisition_strategy:
+      type: "Random"
+      name: "Rnd"
+      parameters: {}
+      uses_random_seed: true
+    acquisition_strategies:
+      - type: "Greedy"
+        name: "Grd"
+        parameters: {}
+        uses_random_seed: false
+c3_2:
+  - name: "C3RF50650M"
+    description: "First simulation"
+    learner:
+      type: "RandomForestRegression"
+      name: "RFTRAIN_ALL"
       uses_embedder: false
       uses_random_seed: true
       parameters:
@@ -470,6 +506,7 @@ c9_3:
       name: "RF10"
       uses_embedder: false
       uses_random_seed: false
+      uses_wt_sequence: false
       parameters:
         #base_model_name: facebook/esm2_t6_8M_UR50D
         base_model_name: facebook/esm2_t33_650M_UR50D
@@ -487,5 +524,26 @@ c9_3:
     acquisition_strategies:
       - type: "Greedy"
         name: "Greed"
+        parameters: {}
+        uses_random_seed: false
+c10:
+  - name: "C3RF50650M"
+    description: "First simulation"
+    learner:
+      type: "ESM2LogLikelihood"
+      name: "RF100"
+      uses_embedder: false
+      uses_random_seed: false
+      uses_wt_sequence: true
+      parameters:
+        base_model_name: facebook/esm2_t6_8M_UR50D
+    first_round_acquisition_strategy:
+      type: "Random"
+      name: "Rnd"
+      parameters: {}
+      uses_random_seed: true
+    acquisition_strategies:
+      - type: "Greedy"
+        name: "Grd"
         parameters: {}
         uses_random_seed: false
