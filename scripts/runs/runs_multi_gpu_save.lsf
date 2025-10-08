@@ -1,11 +1,13 @@
 #!/bin/bash
 #BSUB -P acc_DiseaseGeneCell
 #BSUB -n 1
+#BSUB -W 02:00
+#BSUB -gpu num=1
+#BSUB -q gpu
+# -R a100
+# #BSUB -R h100nvl
 #BSUB -R rusage[mem=6000]
 #BSUB -R span[hosts=1]
-#BSUB -q premium
-#BSUB -W 05:00
-
 
 echo pwd `pwd`
 echo ve $VIRTUAL_ENV
