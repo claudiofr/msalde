@@ -135,7 +135,9 @@ class ESM2HingeForestLearnerHelper(nn.Module):
             # Use CLS token
             embeddings = embeddings[:, 0]
 
+        print("len embeddings", embeddings.shape)
         forest_outputs = self._hinge_forest(embeddings)
+        print("len outputs", forest_outputs.shape)
         return forest_outputs.mean(dim=1, keepdim=False)
 
 
