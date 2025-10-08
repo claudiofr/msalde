@@ -115,3 +115,22 @@ c3:
     model_name: esm2_t2_8M_UR50D
     # embeddings_file: ../EvolvePro/output/plm/esm/brenan1_esm2_t6_8M_UR50D.csv
     embeddings_file: ../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv
+c3_1:
+  default_dataset: cas12f
+  simulation_config_id: c3_1
+c3_2:
+  default_dataset: cas12f
+  simulation_config_id: c3_2
+c9_1:
+  default_dataset: cas12f
+  simulation_config_id: c9_1
+c9_3:
+  default_dataset: cas12f
+  simulation_config_id: c9_3
+c10:
+  default_dataset: cas12f
+  simulation_config_id: c10
+  log_likelihood_ratio_computer:
+    type: ESM2LLRComputer
+    parameters:
+      base_model_name: facebook/esm2_t6_8M_UR50D
