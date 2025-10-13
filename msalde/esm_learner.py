@@ -182,10 +182,8 @@ class ESM2HingeForestLearnerHelper(nn.Module):
             # Use CLS token
             embeddings = embeddings[:, 0]
 
-        X = self.fit_transform_embeddings(embeddings.cpu().numpy())
-        X = torch.tensor(X, dtype=torch.float32).to(self._device)
-        print("len embeddings", X.shape)
-        forest_outputs = self._hinge_forest(X) # embeddings)
+        print("len embeddings", embeddings.shape)
+        forest_outputs = self._hinge_forest(embeddings)
         print("len outputs", forest_outputs.shape)
         return forest_outputs.mean(dim=1, keepdim=False)
 

@@ -1,0 +1,21 @@
+#!/bin/bash
+#BSUB -P acc_DiseaseGeneCell
+#BSUB -n 1
+#BSUB -R rusage[mem=6000]
+#BSUB -R span[hosts=1]
+#BSUB -W 05:00
+#BSUB -gpu num=1
+#BSUB -q gpu
+#BSUB -R h100nvl
+
+echo pwd `pwd`
+echo ve $VIRTUAL_ENV
+echo path $PATH
+echo ppath $PYTHONPATH
+
+echo "started" `date`
+
+python ./scripts/runs/run_maves.py
+
+echo "finished" `date`
+

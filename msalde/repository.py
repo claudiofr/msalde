@@ -10,6 +10,7 @@ from .dbmodel import (
     ALDESubRun, Base, ALDERoundTopVariant
 )
 from .dbmodel import ALDERun
+from .dbmodel import ALDELastRoundScore
 
 
 class RepoSessionContext:
@@ -52,6 +53,8 @@ class ALDERepository:
         embedder_type: str,
         embedder_model_name: str,
         embedder_parameters: dict,
+        log_likelihood_type: str,
+        log_likelihood_parameters: dict,
         num_simulations: int,
         num_rounds: int,
         num_variants: int,
@@ -76,6 +79,8 @@ class ALDERepository:
                 embedder_type=embedder_type,
                 embedder_model_name=embedder_model_name,
                 embedder_parameters=str(embedder_parameters),
+                log_likelihood_type=log_likelihood_type,
+                log_likelihood_parameters=str(log_likelihood_parameters),
                 num_simulations=num_simulations,
                 num_rounds=num_rounds,
                 num_variants=num_variants,
@@ -268,4 +273,29 @@ class ALDERepository:
             session.commit()
             session.refresh(round_variant)
             return round_variant
+
+    def add_last_round_score(
+        self,
+        simulation_id: int,
+        variant_id: int,
+        assay_score: float = None,
+        prediction_score: float = None,
+        insert_ts: datetime = None,
+    ) -> ALDELastRoundScore:
+        """
+        Add a row to the alde_last_round_score table for the given simulation.
+        """
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            last_score = ALDELastRoundScore(
+                simulation_id=simulation_id,
+                variant_id=variant_id,
+                assay_score=assay_score,
+                prediction_score=prediction_score,
+                insert_ts=insert_ts,
+            )
+            session.add(last_score)
+            session.commit()
+            session.refresh(last_score)
+            return last_score
 

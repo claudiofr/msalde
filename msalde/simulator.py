@@ -25,6 +25,10 @@ from .model import (
 )
 from .data_loader import VariantDataLoaderFactory
 from .embedder import ProteinEmbedderFactory
+from .log_likelihood_computer import (
+    LogLikelihoodComputerFactory,
+    LogLikelihoodComputer
+)
 
 
 class DESimulator:
@@ -35,6 +39,8 @@ class DESimulator:
         repository: ALDERepository,
         learner_factories: dict[str, LearnerFactory],
         acquisition_strategy_factories: dict[str, AcquisitionStrategyFactory],
+        log_likelihood_computer_factories: 
+        dict[str, LogLikelihoodComputerFactory],
         run_config,
         sub_run_config
     ):
@@ -43,6 +49,8 @@ class DESimulator:
         self._protein_embedder_factories = protein_embedder_factories
         self._learner_factories = learner_factories
         self._acquisition_strategy_factories = acquisition_strategy_factories
+        self._log_likelihood_computer_factories = \
+        log_likelihood_computer_factories
         self._run_config = run_config
         self._sub_run_config = sub_run_config
 
@@ -111,6 +119,8 @@ class DESimulator:
         embedder_type: str,
         embedder_model_name: str,
         embedder_parameters: dict,
+        log_likelihood_type: str,
+        log_likelihood_parameters: dict,
         num_simulations: int,
         num_rounds: int,
         num_variants: int,
@@ -135,6 +145,8 @@ class DESimulator:
             embedder_type=embedder_type,
             embedder_model_name=embedder_model_name,
             embedder_parameters=embedder_parameters,
+            log_likelihood_type=log_likelihood_type,
+            log_likelihood_parameters=log_likelihood_parameters,
             num_simulations=num_simulations,
             num_rounds=num_rounds,
             num_variants=num_variants,
@@ -209,6 +221,10 @@ class DESimulator:
         """
         Ends a round by updating its performance metrics in the repository.
         """
+        if performance_metrics is None:
+            performance_metrics = PerformanceMetrics()
+        if best_variant is None:
+            best_variant = AssayResult(variant_id=None, score=None)
         self._repository.end_round(round_id, performance_metrics,
                                    best_variant.variant_id, datetime.now())
 
@@ -350,6 +366,8 @@ class DESimulator:
         Returns the AssayResult with the highest score from the list.
         If the list is empty, returns None.
         """
+        if len(assay_results) == 0:
+            return None
         return max(assay_results, key=lambda x: x.score)
 
     def _save_proposed_variants(
@@ -435,7 +453,7 @@ class DESimulator:
                 predictions: Iterable[ModelPrediction],
                 assay_results: Iterable[AssayResult]) -> Tuple[float, float,
                                                                float]:
-            if predictions is None:
+            if predictions is None or len(predictions) == 0:
                 return None, None, None
             y_pred = [pred.score for pred in predictions]
             y_true = [result.score for result in assay_results]
@@ -541,6 +559,27 @@ class DESimulator:
             params = config.parameters
         return embedder_type, config.model_name, params, embedder
 
+    def _get_log_likelihood_computer(
+            self, config_id: str, wt_sequence: str,
+            ) -> Tuple[str, dict, LogLikelihoodComputer]:
+        config = self._run_config[config_id].get(
+            "log_likelihood_ratio_computer")
+        if not config:
+            return None, None, None
+        if "type" not in config:
+            raise ValueError(f"Log loglihood type not specified for config {config_id}")
+        type = config.type
+        if type not in self._log_likelihood_computer_factories:
+            raise ValueError(f"Unknown log likehood type: {type}")
+        factory = self._log_likelihood_computer_factories[type]
+        log_likelihood_computer = factory.create_instance(
+            config=config,
+            wt_sequence=wt_sequence)
+        params = None
+        if hasattr(config, 'parameters'):
+            params = config.parameters
+        return type, params, log_likelihood_computer
+
     def run_simulations(
         self,
         config_id: str,
@@ -555,15 +594,24 @@ class DESimulator:
         test_fraction: float = 0.2,
         random_seed: int = 42,
         dataset_name: str = None,
+        save_last_round_predictions: bool = False,
     ):
         data_loader_type, data_loader = \
             self._get_data_loader(config_id, dataset_name)
         embedder_type, embedder_model_name, embedder_params, embedder \
             = self._get_embedder(config_id, dataset_name)
+        assay_variants, assay_results, wt_sequence = self._load_assay_data(
+            data_loader)
+        log_likelihood_computer_type, log_likelihood_computer_params, \
+            log_likelihood_computer = \
+            self._get_log_likelihood_computer(config_id, wt_sequence)
 
-        assay_variants, assay_results = self._load_assay_data(data_loader)
         if embedder:
             assay_variants = self._embed_variants(embedder, assay_variants)
+        if log_likelihood_computer:
+            assay_variants = \
+                log_likelihood_computer.compute_log_likelihoods(
+                    assay_variants)
         (
             simulation_variants,
             simulation_assay_results,
@@ -574,26 +622,32 @@ class DESimulator:
         )
         max_assay_score = self._get_max_assay_score(simulation_assay_results)
         run = self._create_run(
-            name,
-            descrip,
-            config_id,
-            data_loader_type,
-            dataset_name,
-            embedder_type,
-            embedder_model_name,
-            embedder_params,
-            num_simulations,
-            num_rounds,
-            len(assay_variants),
+            name=name,
+            descrip=descrip,
+            config_id=config_id,
+            data_loader_type=data_loader_type,
+            dataset_name=dataset_name,
+            embedder_type=embedder_type,
+            embedder_model_name=embedder_model_name,
+            embedder_parameters=embedder_params,
+            log_likelihood_type=log_likelihood_computer_type,
+            log_likelihood_parameters=log_likelihood_computer_params,
+            num_simulations=num_simulations,
+            num_rounds=num_rounds,
+            num_variants=len(assay_variants),
+            num_selected_variants_first_round=
             num_selected_variants_first_round,
+            num_top_acquistion_score_variants_per_round=
             num_top_acquistion_score_variants_per_round,
+            num_top_prediction_score_variants_per_round=
             num_top_prediction_score_variants_per_round,
+            num_top_predictions_for_top_n_metrics=
             num_predictions_for_top_n_mean,
-            0,
-            test_fraction,
-            random_seed,
-            max_assay_score,
-        )
+            batch_size=0,
+            test_fraction=test_fraction,
+            random_seed=random_seed,
+            max_assay_score=max_assay_score,
+        )            
         sub_runs = self._compile_sub_runs(config_id)
 
         for sub_run_params in sub_runs:
@@ -612,7 +666,9 @@ class DESimulator:
                     num_top_acquistion_score_variants_per_round,
                     num_top_prediction_score_variants_per_round,
                     num_predictions_for_top_n_mean,
-                    embedder
+                    embedder,
+                    wt_sequence,
+                    save_last_round_predictions
                 )
 
             self._end_sub_run(sub_run.id)
@@ -631,8 +687,10 @@ class DESimulator:
         num_selected_variants_first_round,
         num_top_acquistion_score_variants_per_round,
         num_top_prediction_score_variants_per_round,
-        num_predictions_for_top_n_mean,
-        embedder: ProteinEmbedder,
+    num_predictions_for_top_n_mean,
+    embedder: ProteinEmbedder,
+    wt_sequence: str,
+        save_last_round_predictions: bool = False,
     ):
         """
         Runs a single simulation with the given parameters.
@@ -643,7 +701,7 @@ class DESimulator:
         simulation = self._create_simulation(
             sub_run_id, simulation_num)
         for round_num in range(1, num_rounds + 1):
-            if len(remaining_variants) == 0:
+            if len(remaining_variants) == 0 and round_num < num_rounds:
                 raise Exception(
                     "No more variants to select. " + "Could not complete round"
                 )
@@ -657,7 +715,7 @@ class DESimulator:
             learner, first_round_acquisition_strategy, acquisition_strategy = \
                 self._init_learners_and_strategies(
                     sub_run_params, simulation_num,
-                    round_num, embedder)
+                    round_num, embedder, wt_sequence)
             if round_num == 1:
                 train_predictions = None
                 remaining_predictions = [ModelPrediction(
@@ -684,9 +742,12 @@ class DESimulator:
                 train_predictions = self._make_predictions(
                     learner, train_variants
                     )
-                remaining_predictions = self._make_predictions(
-                    learner, remaining_variants
-                )
+                if len(remaining_variants) > 0:
+                    remaining_predictions = self._make_predictions(
+                        learner, remaining_variants
+                    )
+                else:
+                    remaining_predictions = []
                 if len(test_variants) > 0:
                     test_predictions = self._make_predictions(
                         learner, test_variants)
@@ -742,6 +803,16 @@ class DESimulator:
             self._save_top_variants(round.id, top_variants,
                                     top_variant_predictions,
                                     top_variant_results)
+            if round_num == num_rounds and save_last_round_predictions:
+                self._save_last_round_predictions(
+                    simulation.id,
+                    train_predictions,
+                    train_assay_results,
+                    remaining_predictions,
+                    remaining_variants_results,
+                    test_predictions,
+                    test_assay_results,
+                )
             self._end_round(round.id, performance_metrics,
                             best_variant)
         self._end_simulation(simulation.id)
@@ -761,6 +832,8 @@ class DESimulator:
                     learner_uses_embedder=simulation.learner.uses_embedder,
                     learner_uses_random_seed=
                     simulation.learner.uses_random_seed,
+                    learner_uses_wt_sequence=
+                    simulation.learner.get("uses_wt_sequence", False),
                     first_round_acquisition_strategy_type=
                     simulation.first_round_acquisition_strategy.type,
                     first_round_acquisition_strategy_name=
@@ -784,7 +857,8 @@ class DESimulator:
                                       sub_run_params: list[SubRunParameters],
                                       simulation_num: int,
                                       round_num: int,
-                                      embedder: ProteinEmbedder):
+                                      embedder: ProteinEmbedder,
+                                      wt_sequence: str):
         """
         Initialize learners and acquisition strategies with proper random seeds.
         
@@ -803,6 +877,8 @@ class DESimulator:
 
         if sub_run_params.learner_uses_embedder:
             learner_params["embedder"] = embedder
+        if sub_run_params.learner_uses_wt_sequence:
+            learner_params["wt_sequence"] = wt_sequence
         learner = learner_factory.create_instance(
             **learner_params)
         first_round_acquisition_strategy = None
@@ -934,5 +1010,50 @@ class DESimulator:
                 variant_name=variant.name,
                 assay_score=assay_result.score,
                 prediction_score=prediction.score,
+                insert_ts=datetime.now(),
+            )
+
+    def _save_last_round_predictions(
+        self,
+        simulation_id: int,
+        train_predictions: list[ModelPrediction],
+        train_assay_results: list[AssayResult],
+        remaining_predictions: list[ModelPrediction],
+        remaining_variants_results: list[AssayResult],
+        test_predictions: list[ModelPrediction],
+        test_assay_results: list[AssayResult],
+    ):
+        """
+        Save the predictions and assay results from the last round into the
+        `alde_last_round_score` table. Combines train, remaining and test
+        predictions/assay results and writes one row per variant.
+        """
+        # Combine predictions and assay results into single lists
+        if train_predictions:
+            all_predictions = train_predictions.copy()
+            all_assays = train_assay_results.copy()
+        else:
+            all_predictions = []
+            all_assays = []
+
+        if remaining_predictions:
+            all_predictions.extend(remaining_predictions)
+            all_assays.extend(remaining_variants_results)
+
+        if test_predictions:
+            all_predictions.extend(test_predictions)
+            all_assays.extend(test_assay_results)
+
+        # Build a map of variant_id -> assay score for quick lookup
+        assay_map = {a.variant_id: a.score for a in all_assays}
+
+        # Persist each prediction (use current time as insert_ts)
+        for pred in all_predictions:
+            assay_score = assay_map.get(pred.variant_id)
+            self._repository.add_last_round_score(
+                simulation_id=simulation_id,
+                variant_id=pred.variant_id,
+                assay_score=assay_score,
+                prediction_score=pred.score,
                 insert_ts=datetime.now(),
             )
