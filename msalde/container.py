@@ -1,5 +1,7 @@
 from omegaconf import OmegaConf
 
+from .query_repository import ALDEQueryRepository
+
 from .learner import Learner
 from .strategy import AcquisitionStrategy
 
@@ -24,6 +26,11 @@ from .esm_learner import (
     ESM2RandomForestLearnerFactory,
     ESM2MLPLearnerFactory
 )
+from .esm_ll_learner import (
+    ESM2LogLikelihoodLearnerFactory   
+)
+from .esm_log_likelihood_computer import (
+    ESM2LogLikelihoodComputerFactory)
 
 from .data_file_loader import VariantDataFileLoaderFactory
 
@@ -45,7 +52,8 @@ class ALDEContainer:
             "RandomForestRegression": RandomForestLearnerFactory(),
             "ESM2RandomForestRegression": ESM2RandomForestLearnerFactory(),
             "ESM2MLPRegression": ESM2MLPLearnerFactory(),
-            "ESM2HingeForestRegression": ESM2HingeForestLearnerFactory()
+            "ESM2HingeForestRegression": ESM2HingeForestLearnerFactory(),
+            "ESM2LogLikelihood": ESM2LogLikelihoodLearnerFactory()
     }
     _acquisition_strategy_factories = {
             "Random": RandomStrategyFactory(),
@@ -61,6 +69,9 @@ class ALDEContainer:
     _protein_embedder_factories = {
         "file_loader": FileLoadEmbedderFactory(),
         "esm": ESMEmbedderFactory(),
+    }
+    _log_likelihood_computer_factories = {
+        "ESM2LLRComputer": ESM2LogLikelihoodComputerFactory(),
     }
 
     def __init__(self, config_file: str = "./config/msalde.yaml"):
@@ -86,6 +97,8 @@ class ALDEContainer:
         repo_session_context = RepoSessionContext(
             config.db.url)
         self._repository = ALDERepository(repo_session_context)
+        self._query_repository = ALDEQueryRepository(
+            repo_session_context)
         self._simulator = DESimulator(
             repository=self._repository,
             data_loader_factories=self._data_loader_factories,
@@ -93,6 +106,8 @@ class ALDEContainer:
             learner_factories=self._learner_factories,
             acquisition_strategy_factories=
             self._acquisition_strategy_factories,
+            log_likelihood_computer_factories=
+            self._log_likelihood_computer_factories,
             run_config=config,
             sub_run_config=sub_run_config
         )
@@ -101,3 +116,6 @@ class ALDEContainer:
     def simulator(self):
         return self._simulator
 
+    @property
+    def query_repository(self):
+        return self._query_repository

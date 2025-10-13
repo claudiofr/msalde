@@ -11,6 +11,7 @@ class SubRunParameters:
     learner_parameters: str
     learner_uses_embedder: bool
     learner_uses_random_seed: bool
+    learner_uses_wt_sequence: bool
     first_round_acquisition_strategy_type: str
     first_round_acquisition_strategy_name: str
     first_round_acquisition_strategy_parameters: str
@@ -33,6 +34,7 @@ class Variant:
     sequence: str
     aa_substitution: Optional[str] = None
     embedding: Optional[np.ndarray] = None
+    log_likelihood_ratio: Optional[float] = None
 
 
 @dataclass
