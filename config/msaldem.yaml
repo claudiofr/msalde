@@ -12,137 +12,150 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/brenan_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/brenan.fasta
   jones:
     data_loader_type: file_loader
     input_path: "/sc/arion/work/fratac01/data/al/dms/jones_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/jones_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/jones.fasta
   cas12f:
     data_loader_type: file_loader
     input_path: "/sc/arion/work/fratac01/data/al/dms/cas12f_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/cas12f_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/cas12f.fasta
   cas12f1:
     data_loader_type: file_loader
     input_path: "../EvolvePro/output/dms/cas12f1_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: "../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv"
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/cas12f1.fasta
   giacomelli:
     data_loader_type: file_loader
     input_path: "/sc/arion/work/fratac01/data/al/dms/giacomelli_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/giacomelli_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/giacomelli.fasta
   cov2_S:
     data_loader_type: file_loader
     input_path: "/sc/arion/work/fratac01/data/al/dms/cov2_S_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/cov2_S_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/cov2_S.fasta
   doud:
     data_loader_type: file_loader
     input_path: "/sc/arion/work/fratac01/data/al/dms/doud_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/doud_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/doud.fasta
   haddox:
     data_loader_type: file_loader
     input_path: "/sc/arion/work/fratac01/data/al/dms/haddox_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/haddox_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/haddox.fasta
   kelsic:
     data_loader_type: file_loader
     input_path: "/sc/arion/work/fratac01/data/al/dms/kelsic_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/kelsic_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/kelsic.fasta
   lee:
     data_loader_type: file_loader
     input_path: "/sc/arion/work/fratac01/data/al/dms/lee_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/lee_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/lee.fasta
   markin:
     data_loader_type: file_loader
     input_path: "/sc/arion/work/fratac01/data/al/dms/markin_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/markin_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/markin.fasta
   stiffler:
     data_loader_type: file_loader
     input_path: "/sc/arion/work/fratac01/data/al/dms/stiffler_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/stiffler_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/stiffler.fasta
   zikv_E:
     data_loader_type: file_loader
     input_path: "/sc/arion/work/fratac01/data/al/dms/zikv_E_labels.csv"
     wild_type_id: "WT"
     column_names:
       id_col: "variant"
-      sequence_col: "variant"
+      # sequence_col: "variant"
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/zikv_E_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/zikv_E.fasta
   ADRB2:
     data_loader_type: file_loader
     input_path: /sc/arion/work/fratac01/data/al/dms/ADRB2_labels.csv
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/ADRB2_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/ADRB2.fasta
@@ -152,7 +165,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/AICDA_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/AICDA.fasta
@@ -162,7 +175,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/BRCA1_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/BRCA1.fasta
@@ -172,7 +185,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/BRCA2_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/BRCA2.fasta
@@ -182,7 +195,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/CALM1_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/CALM1.fasta
@@ -192,7 +205,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/CAR11_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/CAR11.fasta
@@ -202,7 +215,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/CASP3_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/CASP3.fasta
@@ -212,7 +225,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/CASP7_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/CASP7.fasta
@@ -222,7 +235,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/CBS_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/CBS.fasta
@@ -232,7 +245,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/GDIA_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/GDIA.fasta
@@ -242,7 +255,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/GRB2_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/GRB2.fasta
@@ -252,7 +265,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/HEM3_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/HEM3.fasta
@@ -262,7 +275,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/HMDH_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/HMDH.fasta
@@ -272,7 +285,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/HXK4_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/HXK4.fasta
@@ -282,7 +295,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/KCNE1_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/KCNE1.fasta
@@ -292,7 +305,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/KCNH2_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/KCNH2.fasta
@@ -302,7 +315,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/MET_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/MET.fasta
@@ -312,7 +325,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/MK01_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/MK01.fasta
@@ -322,7 +335,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/MSH2_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/MSH2.fasta
@@ -332,7 +345,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/MTHR_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/MTHR.fasta
@@ -342,7 +355,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/NPC1_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/NPC1.fasta
@@ -352,7 +365,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/OTC_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/OTC.fasta
@@ -362,7 +375,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/P53_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/P53.fasta
@@ -372,7 +385,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/PAI1_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/PAI1.fasta
@@ -382,7 +395,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/PPARG_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/PPARG.fasta
@@ -392,7 +405,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/PPM1D_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/PPM1D.fasta
@@ -402,7 +415,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/PTEN_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/PTEN.fasta
@@ -412,7 +425,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/RAF1_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/RAF1.fasta
@@ -422,7 +435,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/RASH_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/RASH.fasta
@@ -432,7 +445,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/S22A1_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/S22A1.fasta
@@ -442,7 +455,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/SC6A4_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/SC6A4.fasta
@@ -452,7 +465,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/SCN5A_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/SCN5A.fasta
@@ -462,7 +475,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/SERC_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/SERC.fasta
@@ -472,7 +485,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/SHOC2_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/SHOC2.fasta
@@ -482,7 +495,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/SRC_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/SRC.fasta
@@ -492,7 +505,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/SUMO1_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/SUMO1.fasta
@@ -502,7 +515,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/SYUA_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/SYUA.fasta
@@ -512,7 +525,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/TADBP_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/TADBP.fasta
@@ -522,7 +535,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/TPK1_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/TPK1.fasta
@@ -532,7 +545,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/TPOR_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/TPOR.fasta
@@ -542,7 +555,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/UBC9_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/UBC9.fasta
@@ -552,7 +565,7 @@ datasets:
     wild_type_id: "WT"
     column_names:
       id_col: "mutant"
-      sequence_col: "mutant"
+      # sequence_col: "mutant"
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/VKOR1_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/VKOR1.fasta
@@ -754,3 +767,4 @@ c10:
     type: ESM2LLRComputer
     parameters:
       base_model_name: facebook/esm2_t33_650M_UR50D
+      batch_size: 8

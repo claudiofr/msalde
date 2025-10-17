@@ -1,12 +1,13 @@
 #!/bin/bash
 #BSUB -P acc_DiseaseGeneCell
 #BSUB -n 1
-#BSUB -R rusage[mem=6000]
+#BSUB -R rusage[mem=12000]
 #BSUB -R span[hosts=1]
-#BSUB -W 05:00
+#BSUB -R affinity[core(1)]
+#BSUB -W 04:00
 #BSUB -gpu num=1
 #BSUB -q gpu
-#BSUB -R h100nvl
+##BSUB -R h100nvl
 
 echo pwd `pwd`
 echo ve $VIRTUAL_ENV
@@ -14,6 +15,10 @@ echo path $PATH
 echo ppath $PYTHONPATH
 
 echo "started" `date`
+
+export CUDA_LAUNCH_BLOCKING=1
+# export CUDA_VISIBLE_DEVICES=0
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 python ./scripts/runs/run_maves.py
 
