@@ -60,10 +60,14 @@ datasets = [
     "zikv_E"]
 
 label_dir = "/sc/arion/work/fratac01/data/al/dms"
+label_dir = "/home/claudiof"
 
+
+def get_alde_container1():
+    return ALDEContainer("./config/msaldem.yaml")
 
 def get_alde_container():
-    return ALDEContainer("./config/msaldem.yaml")
+    return ALDEContainer("./config/msalde.yaml")
 
 
 def create_parser():
@@ -128,16 +132,16 @@ def main():
             print(f"Skipping {dataset} with {df.shape[0]} variants")
             continue
         print(f"Running {dataset} with {df.shape[0]} variants")
-        run_simulation_mc(simulator, "c3_1", dataset,
-                          num_rounds=5,
-                          num_simulations=5,
-                          num_selected_variants_first_round=16,
-                          num_top_acquisition_score_variants_per_round=100)
-        run_simulation_mc(simulator, "c3_2", dataset,
-                          num_rounds=2,
-                          num_simulations=5,
-                          num_selected_variants_first_round=15000,
-                          num_top_acquisition_score_variants_per_round=100)
+        # run_simulation_mc(simulator, "c3_1", dataset,
+        #                   num_rounds=5,
+        #                   num_simulations=5,
+        #                   num_selected_variants_first_round=16,
+        #                   num_top_acquisition_score_variants_per_round=100)
+        # run_simulation_mc(simulator, "c3_2", dataset,
+        #                   num_rounds=2,
+        #                   num_simulations=5,
+        #                   num_selected_variants_first_round=15000,
+        #                   num_top_acquisition_score_variants_per_round=100)
         run_simulation_mc(simulator, "c10", dataset,
                           num_rounds=2,
                           num_simulations=1,

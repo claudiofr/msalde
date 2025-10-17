@@ -18,10 +18,10 @@ class VariantDataLoader:
         """
         self._column_name_mapping = column_name_mapping
 
-    def load_assay_data(self) -> Tuple[pd.DataFrame, str]:
+    def load_assay_data(self) -> Tuple[pd.DataFrame, str, float]:
         pass
 
-    def load(self) -> Tuple[list[Variant], list[AssayResult], str]:
+    def load(self) -> Tuple[list[Variant], list[AssayResult], str, float]:
         """
         Load assay results from CSV file.
 
@@ -31,7 +31,7 @@ class VariantDataLoader:
         Returns:
             Tuple of (variants, results)
         """
-        assay_data_df, wt_sequence = self.load_assay_data()
+        assay_data_df, wt_sequence, wt_assay_score = self.load_assay_data()
         id_col = self._column_name_mapping.get("id_col")
         name_col = self._column_name_mapping.get("name_col")
         sequence_col = self._column_name_mapping.get("sequence_col",
@@ -63,7 +63,7 @@ class VariantDataLoader:
             variants.append(variant)
             results.append(result)
 
-        return variants, results, wt_sequence
+        return variants, results, wt_sequence, wt_assay_score
 
 
 class VariantDataLoaderFactory:

@@ -21,7 +21,7 @@ class VariantDataFileLoader(VariantDataLoader):
         else:
             self._fasta_file = None
 
-    def load_assay_data(self) -> Tuple[pd.DataFrame, str]:
+    def load_assay_data(self) -> Tuple[pd.DataFrame, str, float]:
         """
         Load assay results from CSV file.
 
@@ -40,18 +40,26 @@ class VariantDataFileLoader(VariantDataLoader):
             if col not in df.columns:
                 raise ValueError(f"CSV file must contain '{col}' column")
         id_col = self._column_name_mapping["id_col"]
-        seq_col = self._column_name_mapping.get("sequence_col","sequence")
+        wt_sequence = None
         if self._fasta_file:
             df.set_index(id_col, drop=False, inplace=True)
             fasta_dict = {record.id: str(record.seq)
                           for record in SeqIO.parse(self._fasta_file, "fasta")}
             df["sequence"] = pd.Series(fasta_dict)
             df.reset_index(drop=True, inplace=True)
-        wt_sequence = df[df[id_col] == self._wild_type_id]
-        wt_sequence = wt_sequence.get("sequence")
+            wt_sequence = fasta_dict.get(self._wild_type_id)
+        wt_assay_score = None
+        wt_row = df[df[id_col] == self._wild_type_id]
+        if len(wt_row) > 0:
+            score_col = self._column_name_mapping.get("score_col")
+            wt_assay_score = wt_row.iloc[0].get(score_col)
+            if wt_sequence is None:
+                seq_col = self._column_name_mapping.get("sequence_col",
+                                                        "sequence")
+                wt_sequence = wt_row.iloc[0].get(seq_col)
         df = df[df[id_col] != self._wild_type_id]
 
-        return df, wt_sequence
+        return df, wt_sequence, wt_assay_score
 
 
 class VariantDataFileLoaderFactory(VariantDataLoaderFactory):

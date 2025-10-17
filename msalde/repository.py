@@ -66,6 +66,7 @@ class ALDERepository:
         test_fraction: float,
         random_seed: int,
         max_assay_score: float,
+        wt_assay_score: float,
         start_ts: datetime = datetime.now(),
     ) -> ALDERun:
         session = sessionmaker(bind=self._engine)
@@ -96,12 +97,32 @@ class ALDERepository:
                 test_fraction=test_fraction,
                 random_seed=random_seed,
                 max_assay_score=max_assay_score,
+                wt_assay_score=wt_assay_score,
                 start_ts=start_ts,
             )
             session.add(run)
             session.commit()
             session.refresh(run)
             return run
+
+    def _update_run(
+        self,
+        id: int,
+        log_likelihood_type: str,
+        log_likelihood_parameters: dict,
+        num_variants: int,
+        max_assay_score: float,
+        wt_assay_score: float,
+    ):
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            run = session.query(ALDERun).get(id)
+            run.log_likelihood_type = log_likelihood_type
+            run.log_likelihood_parameters = str(log_likelihood_parameters)
+            run.num_variants = num_variants
+            run.max_assay_score = max_assay_score
+            run.wt_assay_score = wt_assay_score
+            session.commit()
 
     def end_run(self, id, end_ts):
         session = sessionmaker(bind=self._engine)
