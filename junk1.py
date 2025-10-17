@@ -1,5 +1,7 @@
 import pandas as pd
 
+dir="/home/claudiof"
+
 # Sample DataFrame with index
 df = pd.DataFrame({
     'Name': ['Alice', 'Bob', 'Charlie'],
