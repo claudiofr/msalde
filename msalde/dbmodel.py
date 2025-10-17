@@ -36,6 +36,7 @@ class ALDERun(Base):
     random_seed = Column(Integer, nullable=False)
     max_assay_score = Column(Float, nullable=False)
     binary_score_cutoff = Column(Float)
+    wt_assay_score = Column(Float)
     start_ts = Column(DateTime)
     end_ts = Column(DateTime)
 

@@ -132,6 +132,7 @@ class DESimulator:
         test_fraction: float,
         random_seed: int,
         max_assay_score: float,
+        wt_assay_score: float,
     ) -> ALDERun:
         """
         Creates a new run record in the repository and returns its run_id.
@@ -162,7 +163,7 @@ class DESimulator:
             test_fraction=test_fraction,
             random_seed=random_seed,
             max_assay_score=max_assay_score,
-
+            wt_assay_score=wt_assay_score,
             start_ts=datetime.now(),
         )
         return run
@@ -580,6 +581,26 @@ class DESimulator:
             params = config.parameters
         return type, params, log_likelihood_computer
 
+    def _update_run(
+        self,
+        run_id: int,
+        log_likelihood_type: str = None,
+        log_likelihood_parameters: dict = None,
+        num_variants: int = None,
+        max_assay_score: float = None,
+        wt_assay_score: float = None,
+    ):
+        """
+        Updates the run record in the repository with new information.
+        """
+        self._repository.update_run(
+            run_id=run_id,
+            log_likelihood_type=log_likelihood_type,
+            log_likelihood_parameters=log_likelihood_parameters,
+            num_variants=num_variants,
+            max_assay_score=max_assay_score,
+            wt_assay_score=wt_assay_score)
+                
     def run_simulations(
         self,
         config_id: str,
@@ -600,8 +621,36 @@ class DESimulator:
             self._get_data_loader(config_id, dataset_name)
         embedder_type, embedder_model_name, embedder_params, embedder \
             = self._get_embedder(config_id, dataset_name)
-        assay_variants, assay_results, wt_sequence = self._load_assay_data(
-            data_loader)
+        run = self._create_run(
+            name=name,
+            descrip=descrip,
+            config_id=config_id,
+            data_loader_type=data_loader_type,
+            dataset_name=dataset_name,
+            embedder_type=embedder_type,
+            embedder_model_name=embedder_model_name,
+            embedder_parameters=embedder_params,
+            # log_likelihood_type=log_likelihood_computer_type,
+            # log_likelihood_parameters=log_likelihood_computer_params,
+            num_simulations=num_simulations,
+            num_rounds=num_rounds,
+            # num_variants=len(assay_variants),
+            num_selected_variants_first_round=
+            num_selected_variants_first_round,
+            num_top_acquistion_score_variants_per_round=
+            num_top_acquistion_score_variants_per_round,
+            num_top_prediction_score_variants_per_round=
+            num_top_prediction_score_variants_per_round,
+            num_top_predictions_for_top_n_metrics=
+            num_predictions_for_top_n_mean,
+            batch_size=0,
+            test_fraction=test_fraction,
+            random_seed=random_seed,
+            # max_assay_score=max_assay_score,
+            # wt_assay_score=wt_assay_score,
+        )
+        assay_variants, assay_results, wt_sequence, wt_assay_score = \
+            self._load_assay_data(data_loader)
         log_likelihood_computer_type, log_likelihood_computer_params, \
             log_likelihood_computer = \
             self._get_log_likelihood_computer(config_id, wt_sequence)
@@ -621,33 +670,13 @@ class DESimulator:
             assay_variants, assay_results, test_fraction, random_seed
         )
         max_assay_score = self._get_max_assay_score(simulation_assay_results)
-        run = self._create_run(
-            name=name,
-            descrip=descrip,
-            config_id=config_id,
-            data_loader_type=data_loader_type,
-            dataset_name=dataset_name,
-            embedder_type=embedder_type,
-            embedder_model_name=embedder_model_name,
-            embedder_parameters=embedder_params,
+        self._update_run(
+            run.id,
             log_likelihood_type=log_likelihood_computer_type,
             log_likelihood_parameters=log_likelihood_computer_params,
-            num_simulations=num_simulations,
-            num_rounds=num_rounds,
             num_variants=len(assay_variants),
-            num_selected_variants_first_round=
-            num_selected_variants_first_round,
-            num_top_acquistion_score_variants_per_round=
-            num_top_acquistion_score_variants_per_round,
-            num_top_prediction_score_variants_per_round=
-            num_top_prediction_score_variants_per_round,
-            num_top_predictions_for_top_n_metrics=
-            num_predictions_for_top_n_mean,
-            batch_size=0,
-            test_fraction=test_fraction,
-            random_seed=random_seed,
             max_assay_score=max_assay_score,
-        )            
+            wt_assay_score=wt_assay_score)
         sub_runs = self._compile_sub_runs(config_id)
 
         for sub_run_params in sub_runs:

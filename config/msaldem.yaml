@@ -637,6 +637,15 @@ c3:
 c3_1:
   default_dataset: cas12f
   simulation_config_id: c3_1
+  embedder:
+    type: file_loader
+    model_name: esm2_t33_650M_UR50D
+c3_2:
+  default_dataset: cas12f
+  simulation_config_id: c3_2
+  embedder:
+    type: file_loader
+    model_name: esm2_t33_650M_UR50D
 c4:
   data_loader:
     type: file_loader

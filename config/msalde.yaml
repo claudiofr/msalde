@@ -35,6 +35,16 @@ datasets:
       score_col: "activity"
     embeddings_file: "../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv"
     fasta_file: "../EvolvePro/output/dms/cas12f.fasta"
+  ADRB2:
+    data_loader_type: file_loader
+    input_path: /home/claudiof/ADRB2_labels.csv
+    wild_type_id: "WT"
+    column_names:
+      id_col: "mutant"
+      # sequence_col: "sequence"
+      score_col: "DMS_score"
+    embeddings_file: /home/claudiof/ADRB2_esm2_t33_650M_UR50D.csv
+    fasta_file: /home/claudiof/ADRB2.fasta
 general:
   store_acquired_variants: true
 c1:
@@ -140,3 +150,4 @@ c10:
     type: ESM2LLRComputer
     parameters:
       base_model_name: facebook/esm2_t6_8M_UR50D
+      batch_size: 32

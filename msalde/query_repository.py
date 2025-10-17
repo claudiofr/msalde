@@ -28,10 +28,14 @@ class ALDEQueryRepository:
         with session() as session:
             sql = text("""
             select variant_id, assay_score,
-                       avg(prediction_score) prediction_score
+                       avg(prediction_score) prediction_score, num_variants
             from alde_simulation s,
-                alde_last_round_score lrs
+                alde_last_round_score lrs,
+                alde_sub_run sr,
+                alde_run r
             where s.id = lrs.simulation_id
+                and s.sub_run_id = sr.id
+                and sr.run_id = r.id
                 and s.sub_run_id = (
                 select max(sr.id)
                 from alde_run r, alde_sub_run sr
