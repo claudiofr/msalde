@@ -59,6 +59,21 @@ datasets = [
     "stiffler",
     "zikv_E"]
 
+datasets = [
+    "brenan",
+    "cas12f",
+    "cov2_S",
+    "doud",
+    "giacomelli",
+    "haddox",
+    "jones",
+    "kelsic",
+    "lee",
+    "markin",
+    "stiffler",
+    "zikv_E"]
+
+
 label_dir = "/sc/arion/work/fratac01/data/al/dms"
 
 
@@ -121,28 +136,31 @@ def main():
     simulator = get_alde_container().simulator
     # run_simulation1(simulator, configid)
     # datasets=["gb1", "aav", "sars2", "calmodulin"]
-    datasets_ = datasets[:1]
+    datasets_ = datasets
     for dataset in datasets_:
         df = pd.read_csv(f"{label_dir}/{dataset}_labels.csv")
         if df.shape[0] < 1000:
             print(f"Skipping {dataset} with {df.shape[0]} variants")
             continue
         print(f"Running {dataset} with {df.shape[0]} variants")
-        run_simulation_mc(simulator, "c3_1", dataset,
-                          num_rounds=5,
-                          num_simulations=5,
-                          num_selected_variants_first_round=16,
-                          num_top_acquisition_score_variants_per_round=100)
-        run_simulation_mc(simulator, "c3_2", dataset,
-                          num_rounds=2,
-                          num_simulations=5,
-                          num_selected_variants_first_round=15000,
-                          num_top_acquisition_score_variants_per_round=100)
         run_simulation_mc(simulator, "c10", dataset,
                           num_rounds=2,
                           num_simulations=1,
                           num_selected_variants_first_round=1,
                           num_top_acquisition_score_variants_per_round=100)
+        continue
+        run_simulation_mc(simulator, "c3_1", dataset,
+                          num_rounds=5,
+                          num_simulations=5,
+                          num_selected_variants_first_round=16,
+                          num_top_acquisition_score_variants_per_round=100)
+        continue
+        run_simulation_mc(simulator, "c3_2", dataset,
+                          num_rounds=2,
+                          num_simulations=2,
+                          num_selected_variants_first_round=15000,
+                          num_top_acquisition_score_variants_per_round=100)
+        continue
 
 
 if __name__ == "__main__":

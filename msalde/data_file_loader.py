@@ -40,15 +40,18 @@ class VariantDataFileLoader(VariantDataLoader):
             if col not in df.columns:
                 raise ValueError(f"CSV file must contain '{col}' column")
         id_col = self._column_name_mapping["id_col"]
-        seq_col = self._column_name_mapping.get("sequence_col","sequence")
+        wt_sequence = None
         if self._fasta_file:
             df.set_index(id_col, drop=False, inplace=True)
             fasta_dict = {record.id: str(record.seq)
                           for record in SeqIO.parse(self._fasta_file, "fasta")}
             df["sequence"] = pd.Series(fasta_dict)
             df.reset_index(drop=True, inplace=True)
-        wt_sequence = df[df[id_col] == self._wild_type_id]
-        wt_sequence = wt_sequence.get("sequence")
+            wt_sequence = fasta_dict.get(self._wild_type_id)
+        if wt_sequence is None:
+            wt_sequence = df[df[id_col] == self._wild_type_id]
+            if len(wt_sequence) > 0:
+                wt_sequence = wt_sequence.iloc[0].get("sequence")
         df = df[df[id_col] != self._wild_type_id]
 
         return df, wt_sequence
