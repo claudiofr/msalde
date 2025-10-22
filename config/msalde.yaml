@@ -2,6 +2,8 @@ db:
   url: "sqlite:///./db/msalde.db"
 sub_runs:
   config_file: "./config/simulations.yaml"
+external_repo:
+  clinvar_dir: ~/gitrepo/msalde/data/clinvar
 datasets:
   cas12f:
     data_loader_type: file_loader

@@ -12,7 +12,6 @@ class ESM2LogLikelihoodComputer(LogLikelihoodComputer):
     """ Base class for computing log-likelihoods of protein sequences.
     """
     def __init__(self, base_model, alphabet, wt_sequence: str, batch_size: int):
-    def __init__(self, base_model, alphabet, wt_sequence: str, batch_size: int):
         super().__init__()
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._base_model = base_model.to(self._device)

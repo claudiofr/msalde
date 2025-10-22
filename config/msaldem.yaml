@@ -5,6 +5,8 @@ sub_runs:
   config_file: "./config/simulations.yaml"
 general:
   store_acquired_variants: false
+external_repo:
+  clinvar_dir: ~/gitrepo/msalde/data/clinvar
 datasets:
   brenan:
     data_loader_type: file_loader
