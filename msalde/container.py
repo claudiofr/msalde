@@ -1,5 +1,7 @@
 from omegaconf import OmegaConf
 
+from .external_repository import ALDEExternalRepository
+
 from .query_repository import ALDEQueryRepository
 
 from .learner import Learner
@@ -111,6 +113,8 @@ class ALDEContainer:
             run_config=config,
             sub_run_config=sub_run_config
         )
+        self._external_repository = ALDEExternalRepository(
+            config.external_repo)
 
     @property
     def simulator(self):
@@ -119,3 +123,7 @@ class ALDEContainer:
     @property
     def query_repository(self):
         return self._query_repository
+
+    @property
+    def external_repository(self):
+        return self._external_repository
