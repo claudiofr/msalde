@@ -119,20 +119,20 @@ class DESimulator:
         embedder_type: str,
         embedder_model_name: str,
         embedder_parameters: dict,
-        log_likelihood_type: str,
-        log_likelihood_parameters: dict,
-        num_simulations: int,
-        num_rounds: int,
-        num_variants: int,
-        num_selected_variants_first_round: int,
-        num_top_acquistion_score_variants_per_round: int,
-        num_top_prediction_score_variants_per_round: int,
-        num_top_predictions_for_top_n_metrics: int,
-        batch_size: int,
-        test_fraction: float,
-        random_seed: int,
-        max_assay_score: float,
-        wt_assay_score: float,
+        log_likelihood_type: str = None,
+        log_likelihood_parameters: dict = None,
+        num_simulations: int = None,
+        num_rounds: int = None,
+        num_variants: int = None,
+        num_selected_variants_first_round: int = None,
+        num_top_acquistion_score_variants_per_round: int = None,
+        num_top_prediction_score_variants_per_round: int = None,
+        num_top_predictions_for_top_n_metrics: int = None,
+        batch_size: int = None,
+        test_fraction: float = None,
+        random_seed: int = None,
+        max_assay_score: float = None,
+        wt_assay_score: float = None,
     ) -> ALDERun:
         """
         Creates a new run record in the repository and returns its run_id.
@@ -594,7 +594,7 @@ class DESimulator:
         Updates the run record in the repository with new information.
         """
         self._repository.update_run(
-            run_id=run_id,
+            id=run_id,
             log_likelihood_type=log_likelihood_type,
             log_likelihood_parameters=log_likelihood_parameters,
             num_variants=num_variants,
