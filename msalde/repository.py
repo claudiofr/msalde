@@ -105,7 +105,7 @@ class ALDERepository:
             session.refresh(run)
             return run
 
-    def _update_run(
+    def update_run(
         self,
         id: int,
         log_likelihood_type: str,
