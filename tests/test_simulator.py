@@ -70,7 +70,7 @@ def run_simulation_mc(simulator, configid, dataset,
 
 def test_run_simulations_llr(
         de_simulator: DESimulator):
-    run_simulation_mc(de_simulator, "c10", "cas12f2",
+    run_simulation_mc(de_simulator, "c10", "brenan", # "cas12f2",
                       num_rounds=2,
                       num_simulations=1,
                       num_selected_variants_first_round=1,
@@ -97,3 +97,12 @@ def test_run_simulations_all(
                           num_top_acquisition_score_variants_per_round=5)
     pass
 
+
+def test_run_simulations_hf(
+        de_simulator: DESimulator):
+    run_simulation_mc(de_simulator, "c9_2", "cas12f2",
+                    num_rounds=5,
+                    num_simulations=5,
+                    num_selected_variants_first_round=5,
+                    num_top_acquisition_score_variants_per_round=5)
+    pass

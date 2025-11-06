@@ -5,6 +5,17 @@ sub_runs:
 external_repo:
   clinvar_dir: ~/gitrepo/msalde/data/clinvar
 datasets:
+  brenan:
+    data_loader_type: file_loader
+    input_path: "../EvolvePro/output/dms/brenan_labels.csv"
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant"
+      # sequence_col: "variant"
+      score_col1: "activity_scaled"
+      score_col: "activity"
+    embeddings_file: "../EvolvePro/output/plm/esm/brenan_esm2_t6_8M_UR50D.csv"
+    fasta_file: "../EvolvePro/output/dms/brenan.fasta"
   cas12f:
     data_loader_type: file_loader
     input_path: "../EvolvePro/output/dms/cas12f_labels.csv"
@@ -142,6 +153,9 @@ c3_2:
 c9_1:
   default_dataset: cas12f
   simulation_config_id: c9_1
+c9_2:
+  default_dataset: cas12f
+  simulation_config_id: c9_2
 c9_3:
   default_dataset: cas12f
   simulation_config_id: c9_3

@@ -476,7 +476,7 @@ c9_2:
     description: "First simulation"
     learner:
       type: "ESM2HingeForestRegression"
-      name: "RF10"
+      name: "ESM2_HF"
       uses_embedder: false
       uses_random_seed: false
       parameters:
@@ -503,7 +503,7 @@ c9_3:
     description: "First simulation"
     learner:
       type: "ESM2HingeForestRegression"
-      name: "RF10"
+      name: "ESM2_HF"
       uses_embedder: false
       uses_random_seed: false
       uses_wt_sequence: false
