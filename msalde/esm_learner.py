@@ -8,7 +8,7 @@ from transformers import AutoModel, AutoTokenizer
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.ensemble import RandomForestRegressor
 # from quantumforest import QForestRegressor  # Ensure QuantumForest is installed
-from RandomHingeForest import RandomHingeForest, RandomHingeFern
+from RandomHingeForest import RandomHingeForest
 
 from .model import ModelPrediction, Variant
 from .learner import Learner, LearnerFactory
@@ -115,9 +115,9 @@ class ESM2HingeForestLearnerHelper(nn.Module):
         super().__init__()
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._base_model = base_model.to(self._device)
-        self._input_dim = input_dim
+        self._input_dim = base_model.config.hidden_size
         self._hinge_forest = RandomHingeForest(
-            in_channels=input_dim,
+            in_channels=self._input_dim,
             out_channels=num_trees,
             depth=tree_depth).to(self._device)
         self._use_pooling = use_pooling
