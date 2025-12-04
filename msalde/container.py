@@ -40,6 +40,9 @@ from .repository import (
     ALDERepository,
     RepoSessionContext,
 )
+from .plotter import ALDEPlotter
+from .dataset_repository import DatasetRepository
+
 import yaml
 
 
@@ -101,9 +104,15 @@ class ALDEContainer:
         self._repository = ALDERepository(repo_session_context)
         self._query_repository = ALDEQueryRepository(
             repo_session_context)
+        self._dataset_repository = DatasetRepository(
+            config.datasets,
+            self._data_loader_factories,
+            self._repository,
+            self._query_repository
+        )
         self._simulator = DESimulator(
             repository=self._repository,
-            data_loader_factories=self._data_loader_factories,
+            dataset_repository=self._dataset_repository,
             protein_embedder_factories=self._protein_embedder_factories,
             learner_factories=self._learner_factories,
             acquisition_strategy_factories=
@@ -115,6 +124,7 @@ class ALDEContainer:
         )
         self._external_repository = ALDEExternalRepository(
             config.external_repo)
+        self._plotter = ALDEPlotter(config)
 
     @property
     def simulator(self):
@@ -127,3 +137,11 @@ class ALDEContainer:
     @property
     def external_repository(self):
         return self._external_repository
+
+    @property
+    def plotter(self):
+        return self._plotter
+
+    @property
+    def dataset_repository(self):
+        return self._dataset_repository

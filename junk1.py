@@ -1,22 +1,25 @@
-import pandas as pd
+import torch
+print(torch.cuda.is_available())   # should return True
+print(torch.version.cuda)          # shows CUDA version used
 
-dir="/home/claudiof"
+from RandomHingeForest import RandomHingeForest
+from packaging.tags import sys_tags
+for tag in sys_tags():
+    # print(tag)
+    pass
+num_features=8
+numTrees = 4
+treeDepth = 4
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cuda"
+print("device",device)
+forest = RandomHingeForest(in_channels=num_features, out_channels=numTrees, depth=treeDepth).to(device)
 
-# Sample DataFrame with index
-df = pd.DataFrame({
-    'Name': ['Alice', 'Bob', 'Charlie'],
-    'Score': [1,2,3]
-}, index=[102, 103, 101])
-
-# Dictionary to add as a new column
-scores = {
-    101: 88,
-    102: 92,
-    103: 85,
-    105: 93
-}
-
-# Add the dictionary as a new column
-df['Score'] = pd.Series(scores)
-
-print(df)
+# Process a batch of size 32
+x = torch.rand([32, num_features]).to(device)
+y = forest(x)
+# print(y.cpu())
+aa = y.mean(dim=1, keepdim=False)
+# aa = y.cpu().mean(dim=1, keepdim=False).to(y.device)
+print(aa)
+print("yea")

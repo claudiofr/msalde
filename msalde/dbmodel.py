@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Boolean, Column, Integer, Float, String, Date, DateTime, ForeignKey,
-    UniqueConstraint, text
+    UniqueConstraint, text, Text
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -216,6 +216,14 @@ class RunMetrics(Base):
     val_spearm = Column(Float)
     val_spearm_rank = Column(Integer)
     total_rank = Column(Float)
+
+
+class Dataset(Base):
+    __tablename__ = "dataset"
+    name = Column(String(15), primary_key=True)
+    gene_symbol = Column(String(15))
+    wt_sequence = Column(Text)
+    wt_assay_score = Column(Float)
 
 
 class RunMetricsView:
