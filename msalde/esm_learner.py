@@ -166,6 +166,7 @@ class ESM2HingeForestLearnerHelper(nn.Module):
         return self._pca.transform(embeddings)
 
     def forward(self, input_ids, attention_mask):
+        print("input ids shape", input_ids.shape)
         outputs = self._base_model(input_ids=input_ids, attention_mask=attention_mask)
         # Use the CLS token representation
         # cls_embedding = outputs.last_hidden_state[:, 0, :]  # shape: (batch_size, hidden_size)
@@ -274,6 +275,7 @@ class ESM2Learner(Learner):
         self._batch_size = batch_size
         self._num_epochs = num_epochs
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print("Using device:", self._device)
         self._model = model.to(self._device)
         self._base_model = base_model.to(self._device)
         self._num_layers_to_unfreeze = num_layers_to_unfreeze
@@ -348,13 +350,24 @@ class ESM2Learner(Learner):
         attention_mask = encoded["attention_mask"].to(self._device)
 
         self._model.eval()
-        start = time.perf_counter()
-        with torch.no_grad():
-            predictions = self._model(input_ids, attention_mask)
-        end = time.perf_counter()
-        print_elapsed("predictions: " + str(len(variants)), start, end)
-        predictions = predictions.detach().squeeze().cpu().numpy()
-        print("Predicted values:", predictions)
+        num_variants = len(variants)
+        predictions = []
+        start_ts = time.perf_counter()
+        for start in range(0, num_variants, self._batch_size):
+            end = min(start + self._batch_size, num_variants)
+            batch_input_ids = input_ids[start:end]
+            batch_attention_mask = attention_mask[start:end]
+            with torch.no_grad():
+                batch_predictions = self._model(batch_input_ids,
+                                                batch_attention_mask)
+            batch_predictions = batch_predictions.detach().squeeze().cpu().numpy()
+            batch_predictions = batch_predictions.tolist()
+            if not isinstance(batch_predictions, list):
+                batch_predictions = [batch_predictions]
+            predictions.extend(batch_predictions)
+        end_ts = time.perf_counter()
+        print_elapsed("predictions: " + str(len(variants)), start_ts, end_ts)
+        print("First set of predicted values:", predictions[:5])
         variant_scores = zip(variants, predictions)
         return [ModelPrediction(variant_id=v.id, score=score)
                 for v, score in variant_scores]

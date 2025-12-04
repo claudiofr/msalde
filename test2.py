@@ -1,6 +1,11 @@
-from sklearn.decomposition import PCA
+import pandas as pd
 
-pca = PCA(n_components=2, random_state=42)
+ds = pd.read_csv('junk_datasets.csv')
 
-ft = pca.fit_transform([[1, 2], [3, 4], [5, 6]])
-print(pca.components_)
+cv = pd.read_csv("data/clinvar/clinvar_labels.csv")
+gs = cv['gene_symbol'].drop_duplicates()
+merged = ds.merge(gs, left_on='dataset', right_on='gene_symbol', how='left')
+missing = merged[merged['gene_symbol'].isnull()]
+pass
+
+

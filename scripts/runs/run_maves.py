@@ -59,21 +59,20 @@ datasets = [
     "stiffler",
     "zikv_E"]
 
-datasets = [
+# minerva change
+datasets1 = [
     "ADRB2",
     "AICDA",
 ]
 
-
+# minerva change
 label_dir = "/sc/arion/work/fratac01/data/al/dms"
-label_dir = "/home/claudiof"
+# label_dir = "/home/claudiof"
 
-
-def get_alde_container1():
-    return ALDEContainer("./config/msaldem.yaml")
-
+# minerva change
 def get_alde_container():
-    return ALDEContainer("./config/msalde.yaml")
+    return ALDEContainer("./config/msaldem.yaml")
+    # return ALDEContainer("./config/msalde.yaml")
 
 
 def create_parser():
@@ -100,13 +99,13 @@ def run_simulation1(simulator, configid):
         #test_fraction=0.2,
         random_seed=42)
 
-def run_simulation_mc(simulator, configid, dataset,
+def run_simulation_mc(simulator, configid, run_name, dataset,
                       num_rounds, num_simulations,
                       num_selected_variants_first_round,
                       num_top_acquisition_score_variants_per_round):
     simulator.run_simulations(
         config_id=configid,
-        name="test_run",
+        name=run_name,
         # num_simulations=3, # 5,
         num_simulations=num_simulations,
         num_rounds=num_rounds,
@@ -132,32 +131,34 @@ def main():
     datasets_ = datasets
     for dataset in datasets_:
         df = pd.read_csv(f"{label_dir}/{dataset}_labels.csv")
-        if df.shape[0] < 1000:
+        if df.shape[0] < 500:
             print(f"Skipping {dataset} with {df.shape[0]} variants")
             continue
         print(f"Running {dataset} with {df.shape[0]} variants")
-        run_simulation_mc(simulator, "c9_3", dataset,
+
+        run_simulation_mc(simulator, "c9_3", "ESM2_HF", dataset,
                           num_rounds=5,
                           num_simulations=5,
                           num_selected_variants_first_round=16,
                           num_top_acquisition_score_variants_per_round=100)
         continue
-        run_simulation_mc(simulator, "c10", dataset,
+        run_simulation_mc(simulator, "c10", "ESM2_LLR", dataset,
                           num_rounds=2,
                           num_simulations=1,
                           num_selected_variants_first_round=1,
                           num_top_acquisition_score_variants_per_round=100)
         continue
-        run_simulation_mc(simulator, "c3_1", dataset,
+        run_simulation_mc(simulator, "c3_1", "RF_AL", dataset,
                           num_rounds=5,
                           num_simulations=5,
                           num_selected_variants_first_round=16,
                           num_top_acquisition_score_variants_per_round=100)
         continue
-        run_simulation_mc(simulator, "c3_2", dataset,
+        first_round_vars = int(0.2 * df.shape[0])
+        run_simulation_mc(simulator, "c3_2", "RFTRAIN_ALL", dataset,
                           num_rounds=2,
                           num_simulations=2,
-                          num_selected_variants_first_round=15000,
+                          num_selected_variants_first_round=first_round_vars,
                           num_top_acquisition_score_variants_per_round=100)
         continue
 

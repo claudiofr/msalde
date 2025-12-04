@@ -29,12 +29,13 @@ from .log_likelihood_computer import (
     LogLikelihoodComputerFactory,
     LogLikelihoodComputer
 )
+from .dataset_repository import DatasetRepository
 
 
 class DESimulator:
     def __init__(
         self,
-        data_loader_factories: dict[str, type[VariantDataLoaderFactory]],
+        dataset_repository: DatasetRepository,
         protein_embedder_factories: dict[str, type[ProteinEmbedderFactory]],
         repository: ALDERepository,
         learner_factories: dict[str, LearnerFactory],
@@ -45,7 +46,7 @@ class DESimulator:
         sub_run_config
     ):
         self._repository = repository
-        self._data_loader_factories = data_loader_factories
+        self._dataset_repository = dataset_repository
         self._protein_embedder_factories = protein_embedder_factories
         self._learner_factories = learner_factories
         self._acquisition_strategy_factories = acquisition_strategy_factories
@@ -525,20 +526,6 @@ class DESimulator:
             spearman=spearman_corr
         )
 
-    def _get_data_loader(self, config_id: str, dataset_name: str) -> Tuple[
-            str, str, VariantDataLoader]:
-        if dataset_name is None:
-            dataset_name = self._run_config[config_id].default_dataset
-        config = self._run_config.datasets[dataset_name]
-        if "data_loader_type" not in config:
-            raise ValueError(f"Data loader type not specified for dataset {dataset_name}")
-        data_loader_type = config.data_loader_type
-        if data_loader_type not in self._data_loader_factories:
-            raise ValueError(f"Unknown data loader type: {data_loader_type}")
-        factory = self._data_loader_factories[data_loader_type]
-        data_loader = factory.create_instance(config)
-        return data_loader_type, data_loader
-
     def _get_embedder(self, config_id: str, dataset_name: str) -> Tuple[
             str, str, dict, ProteinEmbedder]:
         config = self._run_config[config_id].get("embedder")
@@ -617,8 +604,10 @@ class DESimulator:
         dataset_name: str = None,
         save_last_round_predictions: bool = False,
     ):
-        data_loader_type, data_loader = \
-            self._get_data_loader(config_id, dataset_name)
+        if dataset_name is None:
+            dataset_name = self._run_config[config_id].default_dataset
+        data_loader_type = self._dataset_repository.get_data_loader_type(
+            dataset_name)
         embedder_type, embedder_model_name, embedder_params, embedder \
             = self._get_embedder(config_id, dataset_name)
         run = self._create_run(
@@ -650,7 +639,7 @@ class DESimulator:
             # wt_assay_score=wt_assay_score,
         )
         assay_variants, assay_results, wt_sequence, wt_assay_score = \
-            self._load_assay_data(data_loader)
+            self._dataset_repository.load_dataset(dataset_name)
         log_likelihood_computer_type, log_likelihood_computer_params, \
             log_likelihood_computer = \
             self._get_log_likelihood_computer(config_id, wt_sequence)
@@ -716,9 +705,9 @@ class DESimulator:
         num_selected_variants_first_round,
         num_top_acquistion_score_variants_per_round,
         num_top_prediction_score_variants_per_round,
-    num_predictions_for_top_n_mean,
-    embedder: ProteinEmbedder,
-    wt_sequence: str,
+        num_predictions_for_top_n_mean,
+        embedder: ProteinEmbedder,
+        wt_sequence: str,
         save_last_round_predictions: bool = False,
     ):
         """

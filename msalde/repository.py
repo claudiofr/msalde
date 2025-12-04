@@ -7,7 +7,7 @@ from .dbutil import DbExtensionCreator, DbViewCreator
 from .model import PerformanceMetrics
 from .dbmodel import (
     ALDERound, ALDERoundAcquiredVariant, ALDESimulation,
-    ALDESubRun, Base, ALDERoundTopVariant
+    ALDESubRun, Base, ALDERoundTopVariant, Dataset
 )
 from .dbmodel import ALDERun
 from .dbmodel import ALDELastRoundScore
@@ -320,3 +320,26 @@ class ALDERepository:
             session.refresh(last_score)
             return last_score
 
+    def upsert_dataset(
+        self,
+        name: str,
+        gene_symbol: str = None,
+        wt_sequence: str = None,
+        wt_assay_score: float = None,
+    ):
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            dataset = session.query(Dataset).get(name)
+            if dataset is None:
+                if not gene_symbol:
+                    gene_symbol = name
+                dataset = Dataset(
+                    name=name,
+                    gene_symbol=gene_symbol,
+                    wt_sequence=wt_sequence,    
+                    wt_assay_score=wt_assay_score)
+                session.add(dataset)
+            else:
+                dataset.wt_sequence = wt_sequence
+                dataset.wt_assay_score = wt_assay_score
+            session.commit()
