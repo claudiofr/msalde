@@ -1,6 +1,7 @@
 #!/bin/bash
 #set -x
 ml python
+ml proxies/1
 source ./venv_msalde/bin/activate
 unset PYTHONPATH
 which python

@@ -63,15 +63,16 @@ class ALDEQueryRepository:
             return df
 
     def get_mean_activity_of_top_variants_by_round(
-        self, config_id: int, dataset_name: str, run_name: str
+        self, config_id: int, dataset_name: str, run_name: str,
+        strategy_name: str = None
         ) -> pd.DataFrame:
 
         session = sessionmaker(bind=self._engine)
         with session() as session:
             sql = text("""
             with round_sim as (
-                select round_num, simulation_id, avg(assay_score) mean_score,
-                    num_variants
+                select sr.strategy_name, round_num, simulation_id,
+                       avg(assay_score) mean_score, num_variants
                 from alde_round_top_variant rv, alde_round rnd,
                   alde_simulation s, alde_sub_run sr,
                   alde_run r
@@ -79,6 +80,8 @@ class ALDEQueryRepository:
                   and rnd.simulation_id = s.id
                   and s.sub_run_id = sr.id
                   and sr.run_id = r.id
+                  and (:strategy_name is null
+                     or strategy_name = :strategy_name)
                   and r.id =
                     (select max(id)
                     from alde_run r
@@ -86,13 +89,15 @@ class ALDEQueryRepository:
                         and r.dataset_name = :dataset_name
                         and r.name = :run_name
                         and r.end_ts is not null)
-                group by rnd.id, rnd.simulation_id, num_variants
+                group by sr.strategy_name, rnd.id, rnd.simulation_id,
+                       num_variants
             )
-            select rs.round_num, avg(rs.mean_score) mean_score,
-            stddev(rs.mean_score) stddev, num_variants
+            select rs.strategy_name, rs.round_num,
+                       avg(rs.mean_score) mean_score,
+                       stddev(rs.mean_score) stddev, num_variants
             from round_sim rs
-            group by rs.round_num, rs.num_variants
-            order by rs.round_num
+            group by rs.strategy_name, rs.round_num, rs.num_variants
+            order by rs.strategy_name, rs.round_num
             """)
 
             # Execute the query with a parameter
@@ -100,7 +105,8 @@ class ALDEQueryRepository:
                 sql,
                 {"config_id": config_id,
                  "dataset_name": dataset_name,
-                 "run_name": run_name})
+                 "run_name": run_name,
+                 "strategy_name": strategy_name})
             df = pd.DataFrame(result.fetchall(), columns=result.keys())
             # Process the results
             return df

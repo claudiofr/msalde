@@ -1,3 +1,6 @@
+import random
+import matplotlib.colors as mcolors
+
 
 class ALDEPlotter:
     """Plot results of an analysis"""
@@ -93,4 +96,29 @@ class ALDEPlotter:
         axes.set_ylabel('Amino Acid')
         axes.set_zlabel('Squared Error')
         axes.set_title(f"{title}")
+
+
+    def plot_mean_activity_by_round(self, axes, results_df_list, labels, llr_top_mean_activity, title):
+
+        # Get all named colors from Matplotlib
+        all_colors = list(mcolors.CSS4_COLORS.keys())
+
+        # Pick 10 random ones
+        random.seed(42)
+        colors = random.sample(all_colors, 7)
+        colors = ['blue', 'green', 'orange', 'purple', 'cyan', 'magenta', 'brown']
+        for i, results_df in enumerate(results_df_list):
+
+            rounds = results_df["round_num"].astype(int)
+            axes.errorbar(rounds, results_df["mean_score"],
+                        yerr=results_df["stddev"], fmt='-o', capsize=5, label=labels[i],
+                        color=colors[i])
+        axes.set_title(f'{title}', fontsize=16)
+        axes.set_ylabel('Mean Activity', fontsize=14)
+        axes.set_xlabel('Round', fontsize=14)
+        axes.set_xticks(rounds)
+        # Add horizontal dashed line for LLR
+        axes.axhline(llr_top_mean_activity, color='black', linestyle='--', label='Log Likelihood Ratio')
+        axes.legend()
+        # plt.colorbar(scatter, ax=axes, label="Label")
 
