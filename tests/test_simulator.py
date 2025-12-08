@@ -48,10 +48,11 @@ def test_run_simulations1(
 def run_simulation_mc(simulator, configid, dataset,
                       num_rounds, num_simulations,
                       num_selected_variants_first_round,
-                      num_top_acquisition_score_variants_per_round):
+                      num_top_acquisition_score_variants_per_round,
+                      run_name="test_run"):
     simulator.run_simulations(
         config_id=configid,
-        name="test_run",
+        name=run_name,
         # num_simulations=3, # 5,
         num_simulations=num_simulations,
         num_rounds=num_rounds,
@@ -105,4 +106,14 @@ def test_run_simulations_hf(
                     num_simulations=5,
                     num_selected_variants_first_round=5,
                     num_top_acquisition_score_variants_per_round=5)
+    pass
+
+def test_run_simulations_multi_strategies(
+        de_simulator: DESimulator):
+    run_simulation_mc(de_simulator, "c3_3", "cas12f2",
+                    num_rounds=5,
+                    num_simulations=2,
+                    num_selected_variants_first_round=5,
+                    num_top_acquisition_score_variants_per_round=5,
+                    run_name="RF_AL_MS")
     pass

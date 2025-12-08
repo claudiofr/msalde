@@ -150,6 +150,12 @@ c3_2:
   embedder:
     type: file_loader
     model_name: esm2_t6_8M_UR50D
+c3_3:
+  default_dataset: cas12f
+  simulation_config_id: c3_3
+  embedder:
+    type: file_loader
+    model_name: esm2_t6_8M_UR50D
 c9_1:
   default_dataset: cas12f
   simulation_config_id: c9_1

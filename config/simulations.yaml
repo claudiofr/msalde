@@ -222,6 +222,55 @@ c3_2:
         name: "Grd"
         parameters: {}
         uses_random_seed: false
+c3_3:
+  - name: "C3RF50650M"
+    description: "First simulation"
+    learner:
+      type: "RandomForestRegression"
+      name: "RF_AL"
+      uses_embedder: false
+      uses_random_seed: true
+      parameters:
+        # input_dim: 128
+        n_estimators: 20 #100 #100
+        criterion: friedman_mse
+        max_depth: null
+        min_samples_split: 2
+        min_samples_leaf: 1
+        min_weight_fraction_leaf: 0.0
+        max_features: 1.0
+        max_leaf_nodes: null
+        min_impurity_decrease: 0.0
+        bootstrap: true
+        oob_score: false
+        n_jobs: null
+        verbose: 0
+        warm_start: false
+        ccp_alpha: 0.0
+        max_samples: null
+    first_round_acquisition_strategy:
+      type: "Random"
+      name: "Rnd"
+      parameters: {}
+      uses_random_seed: true
+    acquisition_strategies:
+      - type: "UCB"
+        name: "UCB"
+        parameters:
+          exploration_weight: 1.0
+        uses_random_seed: false
+      - type: "ThompsonSampling"
+        name: "TS"
+        parameters: {}
+        uses_random_seed: true
+      - type: "ExpectedImprovement"
+        name: "EI"
+        parameters: {}
+        uses_random_seed: false
+      - type: "Variance"
+        name: "Variance"
+        parameters: {}
+        uses_random_seed: false
 c4:
   - name: "RF50"
     description: "First simulation"
@@ -512,7 +561,7 @@ c9_3:
         base_model_name: facebook/esm2_t33_650M_UR50D
         #input_dim: 320
         use_pooling: true
-        batch_size: 64
+        batch_size: 32
         num_layers_to_unfreeze: 6
         num_epochs: 10
         num_trees: 20
