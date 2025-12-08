@@ -1,5 +1,7 @@
 -- Delete all runs that are not the latest completed run for each (config_id, name, dataset_name) triplet
 
+begin transaction;
+
 CREATE TEMP TABLE temp_run_ids (id INTEGER);
 
 delete from temp_run_ids;

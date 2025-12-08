@@ -32,13 +32,34 @@ class ALDEPlotter:
                        fontsize=14)
         axes.legend(fontsize=14)
 
-    def plot_2d_landscape_by_position_aa(self, axes, position,
-                                         y_value_lists: list,
-                                         line_labels: list,
+    def plot_2d_landscape_by_position_aa(self, axes_top, axes_bottom, position,
+                                         assay_scores, prediction_scores,
+                                         prediction_label,
                                          counts,
                                          count_label: str,
                                          title):
 
+        line_styles = ['-', '--', '-.', ':']
+        colors = [(0.118, 0.565, 1.000, 0.7), (0.235, 0.702, 0.443, 0.7), 'orange', 'purple', 'cyan', 'magenta']
+        axes_top.plot(position, assay_scores, marker='o', linestyle='-', color=colors[0], label='Assay Score')
+        axes_top.set_ylabel('Assay Score')
+        axes_top2 = axes_top.twinx()
+        axes_top2.plot(position, prediction_scores, marker='x', linestyle='--', color=colors[1],
+                       label=prediction_label)
+        axes_top2.set_ylabel(prediction_label)
+        axes_top.legend(loc='lower right', bbox_to_anchor=(1.1, 1.2))
+        axes_top2.legend(loc='lower right', bbox_to_anchor=(1.1, 1.1))
+        axes_bottom.plot(position, counts, marker='o', linestyle='-', color=colors[2],
+                         label=count_label)
+        axes_bottom.set_ylabel(count_label)
+        axes_bottom.set_xlabel('Sequence Space (Position AA Bin)')
+        axes_top.set_title(f"{title}")
+
+    def plot_2d_landscape_by_position_aa_old(self, axes, position,
+                                         y_value_lists, line_labels,
+                                         counts,
+                                         count_label: str,
+                                         title):
         line_styles = ['-', '--', '-.', ':']
         colors = [(0.118, 0.565, 1.000, 0.7), (0.235, 0.702, 0.443, 0.7), 'orange', 'purple', 'cyan', 'magenta']
         if len(y_value_lists) == 0:
