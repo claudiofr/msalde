@@ -136,6 +136,13 @@ def main():
             continue
         print(f"Running {dataset} with {df.shape[0]} variants")
 
+        first_round_vars = int(0.2 * df.shape[0])
+        run_simulation_mc(simulator, "c9_3", "ESM2_HF_20", dataset,
+                          num_rounds=5,
+                          num_simulations=5,
+                          num_selected_variants_first_round=first_round_vars,
+                          num_top_acquisition_score_variants_per_round=100)
+        continue
         run_simulation_mc(simulator, "c9_3", "ESM2_HF", dataset,
                           num_rounds=5,
                           num_simulations=5,
