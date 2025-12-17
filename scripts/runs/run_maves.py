@@ -65,6 +65,11 @@ datasets1 = [
     "AICDA",
 ]
 
+datasets = [
+    "SCN5A",
+]
+
+
 # minerva change
 label_dir = "/sc/arion/work/fratac01/data/al/dms"
 # label_dir = "/home/claudiof"
@@ -132,41 +137,54 @@ def main():
     for dataset in datasets_:
         df = pd.read_csv(f"{label_dir}/{dataset}_labels.csv")
         if df.shape[0] < 500:
-            print(f"Skipping {dataset} with {df.shape[0]} variants")
-            continue
+            num_top_acquire_variants_per_round = int(0.1 * df.shape[0])
+        else:
+            num_top_acquire_variants_per_round = 100
         print(f"Running {dataset} with {df.shape[0]} variants")
 
-        first_round_vars = int(0.2 * df.shape[0])
-        run_simulation_mc(simulator, "c9_3", "ESM2_HF_20", dataset,
-                          num_rounds=5,
-                          num_simulations=5,
-                          num_selected_variants_first_round=first_round_vars,
-                          num_top_acquisition_score_variants_per_round=100)
-        continue
-        run_simulation_mc(simulator, "c9_3", "ESM2_HF", dataset,
-                          num_rounds=5,
-                          num_simulations=5,
-                          num_selected_variants_first_round=16,
-                          num_top_acquisition_score_variants_per_round=100)
-        continue
         run_simulation_mc(simulator, "c10", "ESM2_LLR", dataset,
                           num_rounds=2,
                           num_simulations=1,
                           num_selected_variants_first_round=1,
-                          num_top_acquisition_score_variants_per_round=100)
-        continue
+                          num_top_acquisition_score_variants_per_round=
+                          num_top_acquire_variants_per_round)
+        # continue
         run_simulation_mc(simulator, "c3_1", "RF_AL", dataset,
                           num_rounds=5,
                           num_simulations=5,
                           num_selected_variants_first_round=16,
-                          num_top_acquisition_score_variants_per_round=100)
-        continue
+                          num_top_acquisition_score_variants_per_round=
+                          num_top_acquire_variants_per_round)
+        # continue
         first_round_vars = int(0.2 * df.shape[0])
         run_simulation_mc(simulator, "c3_2", "RFTRAIN_ALL", dataset,
                           num_rounds=2,
                           num_simulations=2,
                           num_selected_variants_first_round=first_round_vars,
-                          num_top_acquisition_score_variants_per_round=100)
+                          num_top_acquisition_score_variants_per_round=
+                          num_top_acquire_variants_per_round)
+        # continue
+        run_simulation_mc(simulator, "c3_3", "RF_AL_MS", dataset,
+                          num_rounds=5,
+                          num_simulations=5,
+                          num_selected_variants_first_round=16,
+                          num_top_acquisition_score_variants_per_round=
+                          num_top_acquire_variants_per_round)
+        continue
+        first_round_vars = int(0.2 * df.shape[0])
+        run_simulation_mc(simulator, "c9_3", "ESM2_HF_20", dataset,
+                          num_rounds=5,
+                          num_simulations=5,
+                          num_selected_variants_first_round=first_round_vars,
+                          num_top_acquisition_score_variants_per_round=
+                          num_top_acquire_variants_per_round)
+        continue
+        run_simulation_mc(simulator, "c9_3", "ESM2_HF", dataset,
+                          num_rounds=5,
+                          num_simulations=5,
+                          num_selected_variants_first_round=16,
+                          num_top_acquisition_score_variants_per_round=
+                          num_top_acquire_variants_per_round)
         continue
 
 

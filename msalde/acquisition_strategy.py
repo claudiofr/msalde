@@ -141,6 +141,26 @@ class ExpectedImprovementStrategy(AcquisitionStrategy):
 
         """
         def compute_ei(mu, sigma, best_so_far):
+            """
+            Compute the Expected Improvement (EI) acquisition function.
+            It is >= 0 and higher values indicate more promising samples.
+            It balances exploration and exploitation by considering both the
+            predicted mean (mu) and uncertainty (sigma) of the model's
+            predictions.
+
+            norm.cdf - assuming a normal distribution with mean 0 and stddev 1
+                it computes the probability that a value drawn from this
+                distribution is less than or equal to input parameter.
+            norm.pdf - assuming a normal distribution with mean 0 and stddev 1
+                it computes the value of the probability density function at
+                the input parameter.
+
+
+            Args:
+                mu: Predicted mean
+                sigma: Predicted standard deviation
+                best_so_far: Best observed (actual not predicted) value so far
+            """
             from scipy.stats import norm
 
             if sigma is None or sigma == 0.0:
