@@ -23,7 +23,7 @@ export CUDA_LAUNCH_BLOCKING=1
 # export CUDA_VISIBLE_DEVICES=0
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-nvidia-smi
+# nvidia-smi
 # ml cuda/12.1
 python junk1.py
 

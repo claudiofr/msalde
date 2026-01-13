@@ -67,6 +67,7 @@ class ALDERepository:
         random_seed: int,
         max_assay_score: float,
         wt_assay_score: float,
+        save_all_predictions: bool,
         start_ts: datetime = datetime.now(),
     ) -> ALDERun:
         session = sessionmaker(bind=self._engine)
@@ -98,6 +99,7 @@ class ALDERepository:
                 random_seed=random_seed,
                 max_assay_score=max_assay_score,
                 wt_assay_score=wt_assay_score,
+                save_all_predictions=save_all_predictions,
                 start_ts=start_ts,
             )
             session.add(run)

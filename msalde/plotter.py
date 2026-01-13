@@ -46,7 +46,7 @@ class ALDEPlotter:
         line_styles = ['-', '--', '-.', ':']
         colors = [(0.118, 0.565, 1.000, 0.7), (0.235, 0.702, 0.443, 0.7), 'orange', 'purple', 'cyan', 'magenta']
         axes_top.plot(position, assay_scores, linestyle='-', color=colors[0], label='Assay Score')
-        axes_top.set_ylabel('Score')
+        axes_top.set_ylabel('Mean Score')
         axes_top.plot(position, prediction_scores, linestyle='--', color=colors[1],
                       label=prediction_label)
         axes_top.fill_between(position, assay_scores, prediction_scores,
@@ -57,7 +57,7 @@ class ALDEPlotter:
         axes_bottom.plot(position, counts, linestyle='-', color=colors[2],
                          label=count_label)
         axes_bottom.set_ylabel(count_label)
-        axes_bottom.set_xlabel('Sequence Space (Position AA Bin)')
+        axes_bottom.set_xlabel('Residue Position')
         axes_top.set_title(f"{title}")
         axes_top.patch.set_facecolor('white')
         axes_bottom.patch.set_facecolor('white')

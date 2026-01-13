@@ -49,7 +49,8 @@ def run_simulation_mc(simulator, configid, dataset,
                       num_rounds, num_simulations,
                       num_selected_variants_first_round,
                       num_top_acquisition_score_variants_per_round,
-                      run_name="test_run"):
+                      run_name="test_run",
+                      save_all_predictions=False):
     simulator.run_simulations(
         config_id=configid,
         name=run_name,
@@ -66,7 +67,8 @@ def run_simulation_mc(simulator, configid, dataset,
         #test_fraction=0.2,
         random_seed=42,
         dataset_name=dataset,
-        save_last_round_predictions=True,)
+        save_last_round_predictions=True,
+        save_all_predictions=save_all_predictions)
 
 
 def test_run_simulations_llr(
@@ -82,20 +84,21 @@ def test_run_simulations_llr(
 def test_run_simulations_al(
         de_simulator: DESimulator):
     run_simulation_mc(de_simulator, "c3_1", "cas12f2",
-                    num_rounds=5,
-                    num_simulations=5,
-                    num_selected_variants_first_round=5,
-                    num_top_acquisition_score_variants_per_round=5)
+                      num_rounds=5,
+                      num_simulations=5,
+                      num_selected_variants_first_round=5,
+                      num_top_acquisition_score_variants_per_round=5,
+                      save_all_predictions=True)
     pass
 
 
 def test_run_simulations_all(
         de_simulator: DESimulator):
     run_simulation_mc(de_simulator, "c3_2", "cas12f2",
-                          num_rounds=2,
-                          num_simulations=5,
-                          num_selected_variants_first_round=15000,
-                          num_top_acquisition_score_variants_per_round=5)
+                      num_rounds=2,
+                      num_simulations=5,
+                      num_selected_variants_first_round=15000,
+                      num_top_acquisition_score_variants_per_round=5)
     pass
 
 

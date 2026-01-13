@@ -4,6 +4,20 @@ sub_runs:
   config_file: "./config/simulations.yaml"
 external_repo:
   clinvar_dir: ~/gitrepo/msalde/data/clinvar
+variant_ref:
+  db:
+    url: "sqlite:///./db/variant_ref.db"
+  datasets:
+    mc4r:
+      input_path: "~/data/al/dms/mc4r-dms.tsv"
+      wt_path: "~/data/al/dms/mc4r-wt.tsv"
+    adrb2:
+      input_path: "~/data/al/dms/adrb2-elife-54895-supp2.xls"
+      wt_path: "/home/claudiof/data/al/dms/ADRB2_wt.fasta"
+    pten:
+      input_path: "~/data/al/dms/PTEN_urn_mavedb_00000013-a-1_scores.csv"
+    src:
+      input_path: "/home/claudiof/data/al/dms/SRC_NIHMS1520956-supplement-4.xlsx"
 datasets:
   brenan:
     data_loader_type: file_loader
