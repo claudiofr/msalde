@@ -134,6 +134,7 @@ class DESimulator:
         random_seed: int = None,
         max_assay_score: float = None,
         wt_assay_score: float = None,
+        save_all_predictions: bool = None,
     ) -> ALDERun:
         """
         Creates a new run record in the repository and returns its run_id.
@@ -165,6 +166,7 @@ class DESimulator:
             random_seed=random_seed,
             max_assay_score=max_assay_score,
             wt_assay_score=wt_assay_score,
+            save_all_predictions=save_all_predictions,
             start_ts=datetime.now(),
         )
         return run
@@ -602,6 +604,7 @@ class DESimulator:
         test_fraction: float = 0.2,
         random_seed: int = 42,
         dataset_name: str = None,
+        save_all_predictions: bool = False,
         save_last_round_predictions: bool = False,
     ):
         if dataset_name is None:
@@ -635,6 +638,7 @@ class DESimulator:
             batch_size=0,
             test_fraction=test_fraction,
             random_seed=random_seed,
+            save_all_predictions=save_all_predictions,
             # max_assay_score=max_assay_score,
             # wt_assay_score=wt_assay_score,
         )
@@ -686,6 +690,7 @@ class DESimulator:
                     num_predictions_for_top_n_mean,
                     embedder,
                     wt_sequence,
+                    save_all_predictions,
                     save_last_round_predictions
                 )
 
@@ -708,11 +713,14 @@ class DESimulator:
         num_predictions_for_top_n_mean,
         embedder: ProteinEmbedder,
         wt_sequence: str,
+        save_all_predictions: bool = False,
         save_last_round_predictions: bool = False,
     ):
         """
         Runs a single simulation with the given parameters.
         """
+        if save_all_predictions:
+            save_last_round_predictions = False
         remaining_variants = simulation_variants.copy()
         train_variants = []
         train_assay_results = []
@@ -798,7 +806,8 @@ class DESimulator:
                     remaining_predictions,
                     remaining_variants_results,
                     simulation_variants,
-                    num_predictions_for_top_n_mean
+                    num_predictions_for_top_n_mean,
+                    save_all_predictions
                 )
             performance_metrics = self._compute_performance_metrics(
                 train_predictions, train_assay_results,
@@ -962,7 +971,8 @@ class DESimulator:
         remaining_variants_predictions: list[ModelPrediction],
         remaining_variants_results: list[AssayResult],
         all_variants: list[Variant],
-        num_top_proposed_variants: int
+        num_top_proposed_variants: int,
+        keep_all_predictions: bool = False
     ) -> Tuple[list[Variant], list[ModelPrediction], list[AssayResult]]:
         """
         Get the top predicted variants from combined train and remaining variants.
@@ -990,8 +1000,11 @@ class DESimulator:
             all_assay_results.extend(remaining_variants_results)
         
         # Sort by prediction score in descending order
-        sorted_predictions = sorted(all_predictions, key=lambda x: x.score, reverse=True)
-        top_predictions = sorted_predictions[:num_top_proposed_variants]
+        if keep_all_predictions:
+            top_predictions = all_predictions
+        else:
+            sorted_predictions = sorted(all_predictions, key=lambda x: x.score, reverse=True)
+            top_predictions = sorted_predictions[:num_top_proposed_variants]
         
         # Get corresponding assay results
         top_variant_ids = {pred.variant_id for pred in top_predictions}

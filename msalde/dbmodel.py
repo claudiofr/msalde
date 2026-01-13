@@ -37,6 +37,7 @@ class ALDERun(Base):
     max_assay_score = Column(Float, nullable=False)
     binary_score_cutoff = Column(Float)
     wt_assay_score = Column(Float)
+    save_all_predictions = Column(Boolean, default=False)
     start_ts = Column(DateTime)
     end_ts = Column(DateTime)
 

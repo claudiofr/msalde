@@ -46,6 +46,7 @@ datasets = [
     "TPOR",
     "UBC9",
     "VKOR1",
+    "MC4R",
     "brenan",
     "cas12f",
     "cov2_S",
@@ -66,7 +67,10 @@ datasets1 = [
 ]
 
 datasets = [
-    "SCN5A",
+    "MC4R",
+    "HXK4",
+    "PTEN",
+    "SRC",
 ]
 
 
@@ -107,7 +111,8 @@ def run_simulation1(simulator, configid):
 def run_simulation_mc(simulator, configid, run_name, dataset,
                       num_rounds, num_simulations,
                       num_selected_variants_first_round,
-                      num_top_acquisition_score_variants_per_round):
+                      num_top_acquisition_score_variants_per_round,
+                      save_all_predictions=False):
     simulator.run_simulations(
         config_id=configid,
         name=run_name,
@@ -126,6 +131,15 @@ def run_simulation_mc(simulator, configid, run_name, dataset,
         dataset_name=dataset,
         save_last_round_predictions=True,)
 
+def run_save_all_predictions(simulator, configid, run_name, dataset,
+                      num_rounds, num_simulations,
+                      num_selected_variants_first_round,
+                      num_top_acquisition_score_variants_per_round):
+    run_simulation_mc(simulator, configid, run_name+"_ALL_PRED", dataset,
+                      num_rounds, num_simulations,
+                      num_selected_variants_first_round,
+                      num_top_acquisition_score_variants_per_round,
+                      save_all_predictions=True)
 
 def main():
     # parser = create_parser()
@@ -142,14 +156,17 @@ def main():
             num_top_acquire_variants_per_round = 100
         print(f"Running {dataset} with {df.shape[0]} variants")
 
-        run_simulation_mc(simulator, "c10", "ESM2_LLR", dataset,
-                          num_rounds=2,
-                          num_simulations=1,
-                          num_selected_variants_first_round=1,
-                          num_top_acquisition_score_variants_per_round=
-                          num_top_acquire_variants_per_round)
+        run_sim_func = run_simulation_mc
+        run_sim_func = run_save_all_predictions
+
+        run_sim_func(simulator, "c10", "ESM2_LLR", dataset,
+                     num_rounds=2,
+                     num_simulations=1,
+                     num_selected_variants_first_round=1,
+                     num_top_acquisition_score_variants_per_round=
+                     num_top_acquire_variants_per_round)
         # continue
-        run_simulation_mc(simulator, "c3_1", "RF_AL", dataset,
+        run_sim_func(simulator, "c3_1", "RF_AL", dataset,
                           num_rounds=5,
                           num_simulations=5,
                           num_selected_variants_first_round=16,
@@ -157,29 +174,29 @@ def main():
                           num_top_acquire_variants_per_round)
         # continue
         first_round_vars = int(0.2 * df.shape[0])
-        run_simulation_mc(simulator, "c3_2", "RFTRAIN_ALL", dataset,
+        run_sim_func(simulator, "c3_2", "RFTRAIN_ALL", dataset,
                           num_rounds=2,
                           num_simulations=2,
                           num_selected_variants_first_round=first_round_vars,
                           num_top_acquisition_score_variants_per_round=
                           num_top_acquire_variants_per_round)
-        # continue
-        run_simulation_mc(simulator, "c3_3", "RF_AL_MS", dataset,
+        continue
+        run_sim_func(simulator, "c3_3", "RF_AL_MS", dataset,
                           num_rounds=5,
                           num_simulations=5,
                           num_selected_variants_first_round=16,
                           num_top_acquisition_score_variants_per_round=
                           num_top_acquire_variants_per_round)
-        continue
+        #continue
         first_round_vars = int(0.2 * df.shape[0])
-        run_simulation_mc(simulator, "c9_3", "ESM2_HF_20", dataset,
+        run_sim_func(simulator, "c9_3", "ESM2_HF_20", dataset,
                           num_rounds=5,
                           num_simulations=5,
                           num_selected_variants_first_round=first_round_vars,
                           num_top_acquisition_score_variants_per_round=
                           num_top_acquire_variants_per_round)
         continue
-        run_simulation_mc(simulator, "c9_3", "ESM2_HF", dataset,
+        run_sim_func(simulator, "c9_3", "ESM2_HF", dataset,
                           num_rounds=5,
                           num_simulations=5,
                           num_selected_variants_first_round=16,

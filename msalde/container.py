@@ -1,5 +1,7 @@
 from omegaconf import OmegaConf
 
+from .variant_ref_loader import VariantRefLoader
+
 from .external_repository import ALDEExternalRepository
 
 from .query_repository import ALDEQueryRepository
@@ -42,6 +44,9 @@ from .repository import (
 )
 from .plotter import ALDEPlotter
 from .dataset_repository import DatasetRepository
+from .var_repository import VariantRepository
+from .var_repository import RepoSessionContext as VariantRepoSessionContext
+
 
 import yaml
 
@@ -125,6 +130,14 @@ class ALDEContainer:
         self._external_repository = ALDEExternalRepository(
             config.external_repo)
         self._plotter = ALDEPlotter(config)
+        variant_repo_session_context = VariantRepoSessionContext(
+            config.variant_ref.db.url)
+        self._variant_repository = VariantRepository(
+            variant_repo_session_context
+        )
+        self._variant_ref_loader = VariantRefLoader(
+            config.variant_ref.datasets
+        )
 
     @property
     def simulator(self):
@@ -145,3 +158,11 @@ class ALDEContainer:
     @property
     def dataset_repository(self):
         return self._dataset_repository
+
+    @property
+    def variant_ref_loader(self):
+        return self._variant_ref_loader
+    
+    @property
+    def variant_repository(self):
+        return self._variant_repository

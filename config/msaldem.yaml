@@ -7,6 +7,13 @@ general:
   store_acquired_variants: false
 external_repo:
   clinvar_dir: ~/gitrepo/msalde/data/clinvar
+variant_ref:
+  db:
+    url: "sqlite:///./db/variant_ref.db"
+  datasets:
+    mc4r:
+      input_path: "~/data/al/dms/mc4r-dms.tsv"
+      wt_path: "~/data/al/dms/mc4r-wt.tsv"
 datasets:
   brenan:
     data_loader_type: file_loader

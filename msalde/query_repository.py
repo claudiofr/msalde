@@ -2,7 +2,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 import pandas as pd
 
-from .dbmodel import Dataset
+from .dbmodel import Dataset, ALDERun
 
 from .repository import RepoSessionContext
 
@@ -12,44 +12,20 @@ class ALDEQueryRepository:
     def __init__(self, session_context: RepoSessionContext):
         self._engine = session_context.engine
 
-    def get_last_round_scores_by_config_dataset_run(
+    def get_run_by_config_dataset_run(
         self, config_id: int, dataset_name: str, run_name: str
-        ) -> pd.DataFrame:
-
+        ) -> ALDERun:
         session = sessionmaker(bind=self._engine)
         with session() as session:
             sql = text("""
-            with
-                predictions as (
-                select variant_id, assay_score,
-                            avg(prediction_score) prediction_score, num_variants
-                from alde_simulation s,
-                    alde_last_round_score lrs,
-                    alde_sub_run sr,
-                    alde_run r
-                where s.id = lrs.simulation_id
-                    and s.sub_run_id = sr.id
-                    and sr.run_id = r.id
-                    and r.id = (
-                        select max(r.id)
-                        from alde_run r
-                        where r.config_id = :config_id
-                            and r.dataset_name = :dataset_name
-                            and r.name = :run_name
-                            and r.end_ts is not null
-                        )
-                group by variant_id, lrs.assay_score, num_variants
-                ),
-                mean_std as (
-                select avg(prediction_score) avg_prediction_score,
-                    stddev(prediction_score) std_prediction_score
-                from predictions
-                )
-            select variant_id, assay_score, prediction_score, num_variants,
-                round((prediction_score - avg_prediction_score)/
-                       std_prediction_score, 3) z_score
-            from predictions p, mean_std ms
-            order by prediction_score desc
+            select *
+            from alde_run r
+            where r.config_id = :config_id
+                and r.dataset_name = :dataset_name
+                and r.name = :run_name
+                and r.end_ts is not null
+            order by r.id desc
+            limit 1
             """)
 
             # Execute the query with a parameter
@@ -58,6 +34,85 @@ class ALDEQueryRepository:
                 {"config_id": config_id,
                  "dataset_name": dataset_name,
                  "run_name": run_name})
+            row = result.fetchone()
+            if row:
+                run = ALDERun(**row._mapping)
+                return run
+            else:
+                return None
+
+    def get_last_round_scores_by_config_dataset_run(
+        self, config_id: int, dataset_name: str, run_name: str
+        ) -> pd.DataFrame:
+
+        run = self.get_run_by_config_dataset_run(
+            config_id, dataset_name, run_name)
+        if not run:
+            return pd.DataFrame()
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            if run.save_all_predictions:
+                sql = text("""
+                with
+                    predictions as (
+                    select variant_id, assay_score,
+                                avg(prediction_score) prediction_score, num_variants
+                    from alde_simulation s,
+                        alde_round rnd,
+                        alde_round_top_variant lrs,
+                        alde_sub_run sr,
+                        alde_run r
+                    where s.id = rnd.simulation_id
+                        and rnd.id = lrs.round_id
+                        and s.sub_run_id = sr.id
+                        and sr.run_id = r.id
+                        and rnd.round_num = r.num_rounds
+                        and r.id = :run_id
+                    group by variant_id, lrs.assay_score, num_variants
+                    ),
+                    mean_std as (
+                    select avg(prediction_score) avg_prediction_score,
+                        stddev(prediction_score) std_prediction_score
+                    from predictions
+                    )
+                select variant_id, assay_score, prediction_score, num_variants,
+                    round((prediction_score - avg_prediction_score)/
+                        std_prediction_score, 3) z_score
+                from predictions p, mean_std ms
+                order by prediction_score desc
+                """)
+            else:
+                sql = text("""
+                with
+                    predictions as (
+                    select variant_id, assay_score,
+                                avg(prediction_score) prediction_score, num_variants
+                    from alde_simulation s,
+                        alde_last_round_score lrs,
+                        alde_sub_run sr,
+                        alde_run r
+                    where s.id = lrs.simulation_id
+                        and s.sub_run_id = sr.id
+                        and sr.run_id = r.id
+                        and r.id = :run_id
+                    group by variant_id, lrs.assay_score, num_variants
+                    ),
+                    mean_std as (
+                    select avg(prediction_score) avg_prediction_score,
+                        stddev(prediction_score) std_prediction_score
+                    from predictions
+                    )
+                select variant_id, assay_score, prediction_score, num_variants,
+                    round((prediction_score - avg_prediction_score)/
+                        std_prediction_score, 3) z_score
+                from predictions p, mean_std ms
+                order by prediction_score desc
+                """)
+
+            # Execute the query with a parameter
+            result = session.execute(
+                sql,
+                {"run_id": run.id})
             df = pd.DataFrame(result.fetchall(), columns=result.keys())
             # Process the results
             return df
