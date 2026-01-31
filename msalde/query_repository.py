@@ -231,3 +231,44 @@ class ALDEQueryRepository:
         with session() as session:
             dataset = session.get(Dataset, dataset_name)
             return dataset
+
+    def get_variant_scores_by_simulation_round(
+        self, config_id: int, dataset_name: str, run_name: str,
+        strategy_name: str = None
+        ) -> pd.DataFrame:
+
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            sql = text("""
+                select variant_id, sr.strategy_name, round_num, simulation_id,
+                       simulation_num, prediction_score, assay_score,
+                       num_variants
+                from alde_round_top_variant rv, alde_round rnd,
+                  alde_simulation s, alde_sub_run sr,
+                  alde_run r
+                where rv.round_id = rnd.id
+                  and rnd.simulation_id = s.id
+                  and s.sub_run_id = sr.id
+                  and sr.run_id = r.id
+                  and (:strategy_name is null
+                     or strategy_name = :strategy_name)
+                  and r.id =
+                    (select max(id)
+                    from alde_run r
+                    where r.config_id = :config_id
+                        and r.dataset_name = :dataset_name
+                        and r.name = :run_name
+                        and r.end_ts is not null)
+            """)
+
+            # Execute the query with a parameter
+            result = session.execute(
+                sql,
+                {"config_id": config_id,
+                 "dataset_name": dataset_name,
+                 "run_name": run_name,
+                 "strategy_name": strategy_name})
+            df = pd.DataFrame(result.fetchall(), columns=result.keys())
+            # Process the results
+            return df
+

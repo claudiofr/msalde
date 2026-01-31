@@ -27,7 +27,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 # ml cuda/12.1
 python junk1.py
 
-python ./scripts/runs/run_maves.py
+python ./scripts/runs/run_maves_minerva.py
 
 echo "finished" `date`
 

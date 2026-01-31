@@ -12,8 +12,185 @@ variant_ref:
     url: "sqlite:///./db/variant_ref.db"
   datasets:
     mc4r:
-      input_path: "~/data/al/dms/mc4r-dms.tsv"
-      wt_path: "~/data/al/dms/mc4r-wt.tsv"
+      input_path: "/home/claudiof/win_wsl_home/data/al/dms/mc4r-dms.tsv"
+      wt_path: "/home/claudiof/win_wsl_home/data/al/dms/mc4r-wt.tsv"
+pdb_repository:
+  datasets:
+    SRC:
+      pdb_path: "/home/claudiof/win_wsl_home/data/al/pdb/2src.cif"
+      domains:
+        - name: "SH3"
+          start: 84
+          end: 140
+          color: "lightblue"
+        - name: "SH2"
+          start: 150
+          end: 248
+          color: "lightgreen"
+        - name: "Kinase"
+          start: 270
+          end: 536
+          color: "lightpink"
+    PTEN:
+      pdb_path: "/home/claudiof/win_wsl_home/data/al/pdb/1d5r.cif"
+      domains:
+        - name: "Phosphatase domain"
+          start: 1
+          end: 185
+          color: "green"
+        - name: "Linker"
+          start: 186
+          end: 194
+          color: "grey"
+        - name: "C2 domain"
+          start: 195
+          end: 351
+          color: "blue"
+        - name: "C-terminal tail"
+          start: 352
+          end: 403
+          color: "grey"
+    HXK4:
+      pdb_path: "/home/claudiof/win_wsl_home/data/al/pdb/1v4s.cif"
+      domains:
+        - name: "Small domain"
+          start: 1
+          end: 64
+          color: "blue"
+        - name: "Hinge 1"
+          start: 65
+          end: 72
+          color: "orange"
+        - name: "Large domain (N‑lobe)"
+          start: 73
+          end: 180
+          color: "green"
+        - name: "Hinge 2"
+          start: 181
+          end: 200
+          color: "orange"
+        - name: "Large domain (C‑lobe)"
+          start: 201
+          end: 300
+          color: "green"
+        - name: "C‑terminal tail"
+          start: 301
+          end: 465
+          color: "grey"
+    MC4R:
+      pdb_path: "/home/claudiof/win_wsl_home/data/al/pdb/7aue.cif"
+      domains:
+        - name: "ECD"
+          start: 1
+          end: 35
+          color: "grey"
+        - name: "TM1"
+          start: 36
+          end: 65
+          color: "green"
+        - name: "ICL1"
+          start: 66
+          end: 71
+          color: "orange"
+        - name: "TM2"
+          start: 72
+          end: 102
+          color: "green"
+        - name: "ICL2"
+          start: 103
+          end: 109
+          color: "orange"
+        - name: "TM3"
+          start: 110
+          end: 140
+          color: "green"
+        - name: "ECL2"
+          start: 141
+          end: 149
+          color: "blue"
+        - name: "TM4"
+          start: 150
+          end: 175
+          color: "green"
+        - name: "ICL3"
+          start: 176
+          end: 199
+          color: "orange"
+        - name: "TM5"
+          start: 200
+          end: 230
+          color: "green"
+        - name: "ECL3"
+          start: 231
+          end: 239
+          color: "blue"
+        - name: "TM6"
+          start: 240
+          end: 270
+          color: "green"
+        - name: "ICL4"
+          start: 271
+          end: 279
+          color: "orange"
+        - name: "TM7"
+          start: 280
+          end: 305
+          color: "green"
+        - name: "C-tail"
+          start: 306
+          end: 332
+          color: "grey"
+    ACVRL1:
+      pdb_path: "/home/claudiof/win_wsl_home/data/al/pdb/3myo.cif"
+      domains:
+        - name: signal_peptide
+          start: 1
+          end: 22
+          color: yellow
+        - name: extracellular_domain
+          start: 23
+          end: 118
+          color: yellow
+        - name: transmembrane_helix
+          start: 119
+          end: 141
+          color: yellow
+        - name: juxtamembrane_region
+          start: 142
+          end: 175
+          color: yellow
+        - name: GS_domain
+          start: 176
+          end: 205
+          color: yellow
+        - name: N_lobe
+          start: 206
+          end: 209
+          color: green
+        - name: beta_sheet_core
+          start: 210
+          end: blue
+          color: yellow
+        - name: alphaC_helix
+          start: 260
+          end: red
+          color: yellow
+        - name: hinge_region
+          start: 286
+          end: 295
+          color: yellow
+        - name: catalytic_loop_HRD
+          start: 310
+          end: 325
+          color: green
+        - name: activation_loop_DFG
+          start: 330
+          end: 370
+          color: blue
+        - name: C_lobe
+          start: 371
+          end: 503
+          color: grey
 datasets:
   brenan:
     data_loader_type: file_loader
@@ -578,6 +755,22 @@ datasets:
       score_col: "DMS_score"
     embeddings_file: /sc/arion/work/fratac01/data/al/esm/VKOR1_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/VKOR1.fasta
+  MC4R:
+    data_loader_type: file_loader
+    input_path: /sc/arion/work/fratac01/data/al/dms/MC4R_labels.csv
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant_id"
+      # sequence_col: "mutant"
+      score_col: "z_score"
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/MC4R_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/MC4R.fasta
+  ACVRL1:
+    data_loader_type: file_loader_fasta_only
+    wild_type_id: "P37023_wildtype"
+    column_names:
+      id_col: "variant_id"
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/ACVRL1.fasta
 c1:
   data_loader:
     type: file_loader

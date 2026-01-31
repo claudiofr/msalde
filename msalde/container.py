@@ -1,5 +1,7 @@
 from omegaconf import OmegaConf
 
+from .pdb_repository import PdbRepository
+
 from .variant_ref_loader import VariantRefLoader
 
 from .external_repository import ALDEExternalRepository
@@ -37,6 +39,7 @@ from .esm_log_likelihood_computer import (
     ESM2LogLikelihoodComputerFactory)
 
 from .data_file_loader import VariantDataFileLoaderFactory
+from .data_file_loader_fasta_only import VariantDataFileLoaderFastaOnlyFactory
 
 from .repository import (
     ALDERepository,
@@ -75,6 +78,7 @@ class ALDEContainer:
         }
     _data_loader_factories = {
         "file_loader": VariantDataFileLoaderFactory(),
+        "file_loader_fasta_only": VariantDataFileLoaderFastaOnlyFactory(),
     }
     _protein_embedder_factories = {
         "file_loader": FileLoadEmbedderFactory(),
@@ -138,6 +142,9 @@ class ALDEContainer:
         self._variant_ref_loader = VariantRefLoader(
             config.variant_ref.datasets
         )
+        self._pdb_repository = PdbRepository(
+            config.get("pdb_repository", {})
+        )
 
     @property
     def simulator(self):
@@ -166,3 +173,7 @@ class ALDEContainer:
     @property
     def variant_repository(self):
         return self._variant_repository
+    
+    @property
+    def pdb_repository(self):
+        return self._pdb_repository
