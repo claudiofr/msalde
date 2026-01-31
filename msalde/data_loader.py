@@ -54,7 +54,9 @@ class VariantDataLoader:
 
             result = AssayResult(
                 variant_id=variant_id,
-                score=float(row[score_col]),
+                score=float(row[score_col]) \
+                if score_col and not pd.isna(
+                            row[score_col]) else 0.0,
                 uncertainty=float(row[uncertainty_col]) \
                 if uncertainty_col and not pd.isna(
                             row[uncertainty_col]) else None,

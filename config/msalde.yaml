@@ -9,15 +9,15 @@ variant_ref:
     url: "sqlite:///./db/variant_ref.db"
   datasets:
     mc4r:
-      input_path: "~/data/al/dms/mc4r-dms.tsv"
-      wt_path: "~/data/al/dms/mc4r-wt.tsv"
+      input_path: "/home/claudiof/win_wsl_home/data/al/dms/mc4r-dms.tsv"
+      wt_path: "/home/claudiof/win_wsl_home/data/al/dms/mc4r-wt.tsv"
     adrb2:
-      input_path: "~/data/al/dms/adrb2-elife-54895-supp2.xls"
-      wt_path: "/home/claudiof/data/al/dms/ADRB2_wt.fasta"
+      input_path: "/home/claudiof/win_wsl_home/data/al/dms/adrb2-elife-54895-supp2.xls"
+      wt_path: "/home/claudiof/win_wsl_home/data/al/dms/ADRB2_wt.fasta"
     pten:
-      input_path: "~/data/al/dms/PTEN_urn_mavedb_00000013-a-1_scores.csv"
+      input_path: "/home/claudiof/win_wsl_home/data/al/dms/PTEN_urn_mavedb_00000013-a-1_scores.csv"
     src:
-      input_path: "/home/claudiof/data/al/dms/SRC_NIHMS1520956-supplement-4.xlsx"
+      input_path: "/home/claudiof/win_wsl_home/data/al/dms/SRC_NIHMS1520956-supplement-4.xlsx"
 datasets:
   brenan:
     data_loader_type: file_loader
@@ -72,6 +72,12 @@ datasets:
       score_col: "DMS_score"
     embeddings_file: /home/claudiof/ADRB2_esm2_t33_650M_UR50D.csv
     fasta_file: /home/claudiof/ADRB2.fasta
+  ACVRL1:
+    data_loader_type: file_loader_fasta_only
+    wild_type_id: "P37023_wildtype"
+    column_names:
+      id_col: "variant_id"
+    fasta_file: /home/claudiof/win_wsl_home/data/al/dms/ACVRL1.fasta
 general:
   store_acquired_variants: true
 c1:

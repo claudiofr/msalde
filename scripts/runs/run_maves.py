@@ -1,4 +1,3 @@
-import context  # noqa: F401 E402
 from msalde.container import ALDEContainer
 import argparse
 import pandas as pd
@@ -75,12 +74,8 @@ datasets = [
 
 
 # minerva change
-label_dir = "/sc/arion/work/fratac01/data/al/dms"
-# label_dir = "/home/claudiof"
-
-# minerva change
-def get_alde_container():
-    return ALDEContainer("./config/msaldem.yaml")
+def get_alde_container(config_file):
+    return ALDEContainer(config_file)
     # return ALDEContainer("./config/msalde.yaml")
 
 
@@ -129,7 +124,8 @@ def run_simulation_mc(simulator, configid, run_name, dataset,
         #test_fraction=0.2,
         random_seed=42,
         dataset_name=dataset,
-        save_last_round_predictions=True,)
+        save_last_round_predictions=True,
+        save_all_predictions=save_all_predictions)
 
 def run_save_all_predictions(simulator, configid, run_name, dataset,
                       num_rounds, num_simulations,
@@ -141,20 +137,22 @@ def run_save_all_predictions(simulator, configid, run_name, dataset,
                       num_top_acquisition_score_variants_per_round,
                       save_all_predictions=True)
 
-def main():
+def run_maves(label_dir, datasets, config_file,
+              num_top_acquire_variants_per_round=None):
     # parser = create_parser()
     # args = parser.parse_args()
     # configid = args.config_id
     # dataset = args.dataset
-    simulator = get_alde_container().simulator
+    simulator = get_alde_container(config_file).simulator
     datasets_ = datasets
     for dataset in datasets_:
-        df = pd.read_csv(f"{label_dir}/{dataset}_labels.csv")
-        if df.shape[0] < 500:
-            num_top_acquire_variants_per_round = int(0.1 * df.shape[0])
-        else:
-            num_top_acquire_variants_per_round = 100
-        print(f"Running {dataset} with {df.shape[0]} variants")
+        if num_top_acquire_variants_per_round is None:
+            df = pd.read_csv(f"{label_dir}/{dataset}_labels.csv")
+            if df.shape[0] < 500:
+                num_top_acquire_variants_per_round = int(0.1 * df.shape[0])
+            else:
+                num_top_acquire_variants_per_round = 100
+            print(f"Running {dataset} with {df.shape[0]} variants")
 
         run_sim_func = run_simulation_mc
         run_sim_func = run_save_all_predictions
@@ -165,7 +163,7 @@ def main():
                      num_selected_variants_first_round=1,
                      num_top_acquisition_score_variants_per_round=
                      num_top_acquire_variants_per_round)
-        # continue
+        continue
         run_sim_func(simulator, "c3_1", "RF_AL", dataset,
                           num_rounds=5,
                           num_simulations=5,
@@ -204,6 +202,3 @@ def main():
                           num_top_acquire_variants_per_round)
         continue
 
-
-if __name__ == "__main__":
-    main()
