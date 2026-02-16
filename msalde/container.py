@@ -1,5 +1,7 @@
 from omegaconf import OmegaConf
 
+from msalde.embedding_extractor import EmbeddingExtractor
+
 from .pdb_repository import PdbRepository
 
 from .variant_ref_loader import VariantRefLoader
@@ -145,6 +147,11 @@ class ALDEContainer:
         self._pdb_repository = PdbRepository(
             config.get("pdb_repository", {})
         )
+        self._embedding_extractor = EmbeddingExtractor(
+            protein_embedder_factories=self._protein_embedder_factories,
+            embedder_config=config.get("embedding_extractor", {}),
+            datasets_config=config.datasets
+        )
 
     @property
     def simulator(self):
@@ -177,3 +184,7 @@ class ALDEContainer:
     @property
     def pdb_repository(self):
         return self._pdb_repository
+
+    @property
+    def embedding_extractor(self):
+        return self._embedding_extractor

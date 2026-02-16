@@ -66,9 +66,9 @@ class PdbRepository:
         cif = MMCIF2Dict(pdb_file)
 
         regions = extract_domain_like_regions(cif, 1)
-        print("Domain-like structured regions:")
-        for i, (start, end) in enumerate(regions, 1):
-            print(f"  Region {i}: {start}–{end}")
+        # print("Domain-like structured regions:")
+        # for i, (start, end) in enumerate(regions, 1):
+        #     print(f"  Region {i}: {start}–{end}")
 
         dssp_data = extract_dssp_from_cif(cif)
         residue_number_map = build_residue_number_map(cif)

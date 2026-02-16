@@ -11,6 +11,7 @@ import matplotlib.gridspec as gridspec
 from msalde.container import ALDEContainer
 from msalde.ml_util import calculate_optimal_youden_index
 from msalde.plotter import ALDEPlotter
+from msalde.variant_util import variant_id_to_position
 
 DATASETS = [
     "ADRB2",
@@ -249,6 +250,123 @@ def compute_gof_lof_by_z_score_q_value(
         )
     )
     return results[results[class_label_column].notna()]
+
+
+
+def show_last_round_mse_by_domain(
+        repo, plotter: ALDEPlotter, axes, config_id,
+        run_name,
+        assay_source,
+        title,
+        domains: list,
+        ) -> int:
+    results = repo.get_last_round_scores_by_config_dataset_run(
+        config_id=config_id,
+        dataset_name=assay_source,
+        run_name=run_name)
+    if len(results) == 0:
+        return 0
+    results['position'] = results['variant_id'].apply(
+        variant_id_to_position)
+    
+    # mse is mean signed error
+    gc.collect(1)
+    # Add class label column to results
+
+    mse_rows = []
+    for domain in domains:
+        domain_results = results[results["position"].between(
+            domain["start"], domain["end"])]
+        if len(domain_results) == 0:
+            continue
+        mse = np.mean(domain_results['prediction_score'] -
+                      domain_results['assay_score'])
+        mse_rows.append(
+            {
+            "domain": domain,
+            "metric": mse
+            })
+
+    mse_results = pd.DataFrame(mse_rows)
+    plotter.plot_metric_by_domain(axes, mse_results,
+                                        "Mean Signed Error",
+                                 title=title)
+    return len(results)
+
+
+def show_last_round_auc_by_domain(
+        repo, var_repo, plotter: ALDEPlotter, axes, config_id,
+        run_name,
+        assay_source, protein_symbol,
+        plot_info_list,
+        class_label_column, title,
+        domains: list,
+        ) -> int:
+    results_all = repo.get_last_round_scores_by_config_dataset_run(
+        config_id=config_id,
+        dataset_name=assay_source,
+        run_name=run_name)
+    if len(results_all) == 0:
+        return 0
+    results_all['position'] = results_all['variant_id'].apply(
+        variant_id_to_position)
+    
+    auc_results_list = []
+    for plot_info in plot_info_list:
+        gc.collect(1)
+        results = results_all.copy()
+        # Add class label column to results
+        if plot_info.get('compute_class_label_func', None) is not None:
+            assay_df = plot_info['compute_class_label_func'](
+                results[["variant_id", "assay_score"]].drop_duplicates(),
+                class_label_column
+            )
+        else:
+            assay_df = var_repo.get_variant_assay(
+                assay_source=assay_source,
+                protein_symbol=protein_symbol,
+                assay_type=plot_info["assay_type"],
+                assay_subtype=plot_info.get("assay_subtype", None),
+            )
+            assay_df = assay_df[~assay_df[class_label_column].isna()]
+            if len(assay_df) == 0:
+                return 0
+        results[class_label_column] = results["variant_id"].map(
+            assay_df.set_index("variant_id")[class_label_column])
+        results = results[~results[class_label_column].isna()]
+        if len(results) == 0:
+            return 0
+        # num_positive = results[class_label_column].sum()
+        # num_negative = len(results) - num_positive
+
+        auc_rows = []
+        for domain in domains:
+            domain_results = results[results["position"].between(
+                domain["start"], domain["end"])]
+            if len(domain_results) == 0:
+                continue
+            optimal_youden_index, fpr, tpr, _ = calculate_optimal_youden_index(
+                    domain_results[class_label_column].values,
+                    domain_results['prediction_score'].values)
+            auc = roc_auc_score(domain_results[class_label_column].values,
+                                domain_results['prediction_score'].values)
+            num_positive = domain_results[class_label_column].sum()
+            num_negative = len(domain_results) - num_positive
+            auc_rows.append(
+                {"metric": auc,
+                "optimal_youden_index": optimal_youden_index,
+                "domain": domain,
+                "num_positive": num_positive,
+                "num_negative": num_negative})
+
+        auc_results = pd.DataFrame(auc_rows)
+        auc_results_list.append({"label": plot_info['label'],
+                                 "results": auc_results})
+    plotter.plot_metric_by_domain_multi(axes, auc_results_list,
+                                        "AUC",
+                                 title=f"{assay_source}/{run_name}")
+    return len(results)
+
 
 
 def show_roc_auc_by_round(
@@ -504,6 +622,7 @@ def show_protein_landscape_plots(show_plot_func, datasets, projection='rectiline
 
     config_ids = ["c10", "c3_1", "c3_2"]
     run_names = ["ESM2_LLR", "RF_AL", "RFTRAIN_ALL"]
+    run_names = ["ESM2_LLR_ALL_PRED", "RF_AL_ALL_PRED", "RFTRAIN_ALL_ALL_PRED"]
     titles = ["LogLikelihood", "RandomForest AL", "RandomForest Train20%"]
     standardize_scores = [True, False, False]
     num_models = len(config_ids)
@@ -726,6 +845,121 @@ def show_auc_by_round_plots(show_plot_func, dataset_plot_info,
                 title=f"{dataset}/{title}",
                 llr_config_id=llr_config_id,
                 llr_run_name=llr_run_name)
+            if results_count == 0:
+                break
+            col_ind += 1
+            if col_ind >= num_cols:
+                col_ind = 0
+                row_ind += 1
+
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.subplots_adjust(hspace=0.5, wspace=0.3)
+    plt.show()
+
+
+def show_metric_by_domain_plots_multi(show_plot_func, dataset_plot_info):
+
+    container = ALDEContainer("./config/msaldem.yaml")
+    repo = container.query_repository
+    plotter = container.plotter
+    var_repo = container.variant_repository
+    pdb_repo = container.pdb_repository
+
+    config_ids = ["c3_1"]
+    run_names = ["RF_AL_ALL_PRED"]
+    titles = ["RandomForest AL"]
+    standardize_scores = [False]
+    num_models = len(config_ids)
+
+    num_cols = 1
+    num_rows_per_dataset = num_models// num_cols + int(num_models % num_cols > 0)
+    num_rows = len(dataset_plot_info) * num_rows_per_dataset
+
+    fig = plt.figure(figsize=(20, 5*num_rows))
+    fig.patch.set_facecolor('white')
+    grid = gridspec.GridSpec(num_rows, num_cols, figure=fig, hspace=.8) # wspace=0.4, hspace=0.4)
+
+    #fig, axes = plt.subplots(num_rows, 3, figsize=(20, 6*len(datasets_)),
+    #                         subplot_kw={'projection': projection})
+    #axes = axes.flatten()
+    plt.style.use('seaborn-v0_8')
+    row_ind = 0
+    col_ind = 0
+    for i, plot_info in enumerate(dataset_plot_info):
+        # increment_row_id = True
+        dataset = plot_info['dataset']
+        _, _, domains = pdb_repo.get_secondary_structure(dataset)
+        for model_ind in range(num_models):
+            config_id = config_ids[model_ind]
+            run_name = run_names[model_ind]
+            title = titles[model_ind]
+            standardize_scores_flag = standardize_scores[model_ind]
+            # Add a subplot to the grid at (row_ind, col_ind)
+            axes = fig.add_subplot(grid[row_ind, col_ind])
+            results_count = show_plot_func(
+                repo, var_repo, plotter, axes, config_id,
+                run_name,
+                dataset, dataset,
+                plot_info['plots'],
+                class_label_column="class_label",
+                title=f"{dataset}/{title}",
+                domains=domains)
+            if results_count == 0:
+                break
+            col_ind += 1
+            if col_ind >= num_cols:
+                col_ind = 0
+                row_ind += 1
+
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.subplots_adjust(hspace=0.5, wspace=0.3)
+    plt.show()
+
+
+def show_metric_by_domain_plots(show_plot_func, datasets):
+
+    container = ALDEContainer("./config/msaldem.yaml")
+    repo = container.query_repository
+    plotter = container.plotter
+    var_repo = container.variant_repository
+    pdb_repo = container.pdb_repository
+
+    config_ids = ["c3_1"]
+    run_names = ["RF_AL_ALL_PRED"]
+    titles = ["RandomForest AL"]
+    standardize_scores = [False]
+    num_models = len(config_ids)
+
+    num_cols = 1
+    num_rows_per_dataset = num_models// num_cols + int(num_models % num_cols > 0)
+    num_rows = len(datasets) * num_rows_per_dataset
+
+    fig = plt.figure(figsize=(20, 5*num_rows))
+    fig.patch.set_facecolor('white')
+    grid = gridspec.GridSpec(num_rows, num_cols, figure=fig, hspace=.8) # wspace=0.4, hspace=0.4)
+
+    #fig, axes = plt.subplots(num_rows, 3, figsize=(20, 6*len(datasets_)),
+    #                         subplot_kw={'projection': projection})
+    #axes = axes.flatten()
+    plt.style.use('seaborn-v0_8')
+    row_ind = 0
+    col_ind = 0
+    for i, dataset in enumerate(datasets):
+        # increment_row_id = True
+        _, _, domains = pdb_repo.get_secondary_structure(dataset)
+        for model_ind in range(num_models):
+            config_id = config_ids[model_ind]
+            run_name = run_names[model_ind]
+            title = titles[model_ind]
+            standardize_scores_flag = standardize_scores[model_ind]
+            # Add a subplot to the grid at (row_ind, col_ind)
+            axes = fig.add_subplot(grid[row_ind, col_ind])
+            results_count = show_plot_func(
+                repo, plotter, axes, config_id,
+                run_name,
+                dataset,
+                title=f"{dataset}/{title}",
+                domains=domains)
             if results_count == 0:
                 break
             col_ind += 1
