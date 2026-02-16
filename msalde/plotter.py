@@ -3,6 +3,8 @@ import random
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import matplotlib as plt
+from matplotlib.pyplot import axes
+from sqlalchemy import label
 
 
 class ALDEPlotter:
@@ -272,6 +274,84 @@ class ALDEPlotter:
         #axes.axhline(llr_auc, color='black', linestyle='--', label='Log Likelihood Ratio')
         axes.legend(fontsize=11, loc='upper left', framealpha=0.0)
         # plt.colorbar(scatter, ax=axes, label="Label")
+
+
+    def plot_metric_by_domain_multi(self, axes, results_list,
+                                    metric_name: str,
+                       title):
+
+        #plt.rcParams.update({
+        #    "text.usetex": True,
+        #})
+        colors = plt.cm.tab10.colors   # 10 distinct colors
+        if len(results_list) > len(colors):
+            raise ValueError("Too many result sets to plot; increase color palette.")
+
+        # We will build custom x-tick labels with domain names and +/- counts
+        # in xtick_label_info_list. Each element in the list corresponds to a 
+        # tuple with the first element being the domain name and the second element
+        # being a list of (num_positive, num_negative) tuples for each result set in
+        # results_list. So the structure will be:
+        # [ (domain_name, [ (num_pos_1, num_neg_1), (num_pos_2, num_neg_2), ... ] ), ... ]
+        # So for each domain along x axis, we will have the name and a 
+        # list of counts for each plot represented in results_list.
+
+        xtick_label_info_list = None
+        for i, result_dict in enumerate(results_list):
+            results = result_dict["results"]
+            label = result_dict["label"]
+            #num_positive = results["num_positive"]
+            #num_negative = results["num_negative"]
+            if not xtick_label_info_list:
+                domain_names = results["domain"].apply(lambda d: d["name"])
+                xtick_label_info_list = [(domain_name, []) for domain_name in domain_names]
+            # Update the counts for each domain
+            for domain_ind, result in results.iterrows():
+                xtick_label_info_list[domain_ind][1].append((result["num_positive"], result["num_negative"]))
+            axes.plot(domain_names,
+                      results["metric"],
+                      marker='o', linestyle='-',
+                      label=f'{label}',
+                      color=colors[i]
+            )
+
+        axes.set_title(f'{title}', fontsize=16)
+        axes.set_ylabel(metric_name, fontsize=12)
+        # axes.set_xlabel('Domain', fontsize=12)
+
+        # For each domain, set custom x-tick labels with domain name and +/- counts
+        # for each plot in results_list. We will place the domain name at y=-0.1
+        # and the counts below that, with some vertical spacing.
+        axes.set_xticks(range(len(results)))
+        axes.set_xticklabels([])  # Clear default labels
+        positions = axes.get_xticks() 
+        for xpos, label_info in zip(positions, xtick_label_info_list):
+            axes.text(xpos, -0.1, label_info[0], ha="center", va="top", transform=axes.get_xaxis_transform() )
+            for i, (variant_counts, color) in enumerate(zip(label_info[1], colors[:len(results_list)])):
+                text = f"+{variant_counts[0]}/-{variant_counts[1]}"
+                axes.text(xpos, -0.2 - 0.08*i, text, ha="center", va="top", color=color, transform=axes.get_xaxis_transform() )
+
+        axes.legend(fontsize=11, loc='upper left', framealpha=0.0,
+                    bbox_to_anchor=(1.02, 1))
+        # plt.colorbar(scatter, ax=axes, label="Label")
+
+
+    def plot_metric_by_domain(self, axes, results,
+                                    metric_name: str,
+                       title):
+
+        axes.plot(results["domain"].apply(lambda d: d["name"]),
+                          results["metric"],
+                          marker='o', linestyle='-',
+            )
+
+        axes.set_title(f'{title}', fontsize=16)
+        axes.set_ylabel(metric_name, fontsize=12)
+        axes.set_xlabel('Domain', fontsize=12)
+
+
+
+
 
 
 

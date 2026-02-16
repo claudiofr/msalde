@@ -4,6 +4,20 @@ sub_runs:
   config_file: "./config/simulations.yaml"
 external_repo:
   clinvar_dir: ~/gitrepo/msalde/data/clinvar
+embedding_extractor:
+  type: esm
+  model_name: facebook/esm2_t6_8M_UR50D
+  output_dir: "/home/claudiof/win_wsl_home/data/al/esm/win_pool_8_5"
+  parameters:
+    cache_dir: "./model_cache"
+    device: "cpu"
+    batch_size: 8
+    quantize: false
+    compression:
+      method: window_pooling # options: [none, mean_pooling, max_pooling, window_pooling]
+      num_segments: 8
+      overlap_fraction: 0.5
+      pool_method: mean  # options: [mean, max]
 variant_ref:
   db:
     url: "sqlite:///./db/variant_ref.db"
@@ -61,7 +75,7 @@ datasets:
       score_col1: "activity_scaled"
       score_col: "activity"
     embeddings_file: "../EvolvePro/output/plm/esm/cas12f_esm2_t6_8M_UR50D.csv"
-    fasta_file: "../EvolvePro/output/dms/cas12f.fasta"
+    fasta_file: "../EvolvePro/output/dms/cas12f2.fasta"
   ADRB2:
     data_loader_type: file_loader
     input_path: /home/claudiof/ADRB2_labels.csv

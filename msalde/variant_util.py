@@ -64,3 +64,21 @@ def hgvs_protein_to_variant_id(protein_change: str) -> str:
     except Exception as e:
         print(f"Error extracting variant ID from {protein_change}: {e}")
         return None
+
+
+def variant_id_to_position(variant_id: str) -> int:
+    """
+    Extracts the position from a variant ID.
+
+    Parameters
+    ----------
+    variant_id : str
+        The variant ID string (e.g., "L9Q").
+
+    Returns
+    -------
+    int
+        The extracted position (e.g., 9).
+    """
+    ref_aa, position, alt_aa = parse_hgvs_protein_string(variant_id)
+    return position

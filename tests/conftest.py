@@ -15,5 +15,9 @@ def de_simulator(alde_container):
     return alde_container.simulator
 
 @pytest.fixture
+def embedding_extractor(alde_container):
+    return alde_container.embedding_extractor
+
+@pytest.fixture
 def de_simulator1():
     return ALDEContainer("./config/msalde1.yaml")

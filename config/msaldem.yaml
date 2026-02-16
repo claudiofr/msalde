@@ -14,6 +14,20 @@ variant_ref:
     mc4r:
       input_path: "/home/claudiof/win_wsl_home/data/al/dms/mc4r-dms.tsv"
       wt_path: "/home/claudiof/win_wsl_home/data/al/dms/mc4r-wt.tsv"
+embedding_extractor:
+  type: esm
+  model_name: facebook/esm2_t33_650M_UR50D
+  output_dir: /sc/arion/work/fratac01/data/al/esm/win_pool_8_5
+  parameters:
+    cache_dir: "./model_cache"
+    device: "gpu"
+    batch_size: 8
+    quantize: false
+    compression:
+      method: window_pooling # options: [none, mean_pooling, max_pooling, window_pooling]
+      num_segments: 8
+      overlap_fraction: 0.5
+      pool_method: mean  # options: [mean, max]
 pdb_repository:
   datasets:
     SRC:
@@ -143,6 +157,35 @@ pdb_repository:
     ACVRL1:
       pdb_path: "/home/claudiof/win_wsl_home/data/al/pdb/3myo.cif"
       domains:
+        # Kinase domain 206-503
+        - name: signal_peptide
+          start: 1
+          end: 22
+          color: yellow
+        - name: ECD # extracellular_domain
+          start: 23
+          end: 118
+          color: orange
+        - name: TM_Helix # transmembrane_helix
+          start: 119
+          end: 141
+          color: red
+        - name: juxtamem # juxtamembrane_region
+          start: 142
+          end: 175
+          color: green
+        - name: GS # GS_domain
+          start: 176
+          end: 205
+          color: blue
+        - name: Kinase
+          start: 206
+          end: 503
+          color: green
+    ACVRL1_LONG:
+      pdb_path: "/home/claudiof/win_wsl_home/data/al/pdb/3myo.cif"
+      domains:
+        # Kinase domain 206-503
         - name: signal_peptide
           start: 1
           end: 22
@@ -162,33 +205,48 @@ pdb_repository:
         - name: GS_domain
           start: 176
           end: 205
-          color: yellow
+          color: blue
         - name: N_lobe
           start: 206
           end: 209
           color: green
-        - name: beta_sheet_core
+        - name: glycine_rich_loop
+          # ATP binding lid
           start: 210
-          end: blue
+          end: 216
+          color: yellow
+        - name: VAIK_motif
+          # β3-lysine that anchors ATP
+          start: 229
+          end: 235
           color: yellow
         - name: alphaC_helix
-          start: 260
-          end: red
-          color: yellow
-        - name: hinge_region
-          start: 286
-          end: 295
+          # Regulatory helix; Glu forms salt bridge with β3-Lys
+          start: 248
+          end: 266
           color: yellow
         - name: catalytic_loop_HRD
-          start: 310
-          end: 325
+          # Catalytic base and substrate-positioning residues
+          start: 328
+          end: 336
           color: green
         - name: activation_loop_DFG
-          start: 330
-          end: 370
+          # Mg2+ coordination; DFG-in conformation
+          start: 351
+          end: 353
+          color: blue
+        - name: activation_loop
+          # A-loop; adopts inhibitor-stabilized conformation
+          start: 354
+          end: 387
+          color: blue
+        - name: P_plus_1_loop
+          # Substrate positioning loop
+          start: 388
+          end: 395
           color: blue
         - name: C_lobe
-          start: 371
+          start: 396
           end: 503
           color: grey
 datasets:
@@ -473,7 +531,7 @@ datasets:
       id_col: "mutant"
       # sequence_col: "mutant"
       score_col: "DMS_score"
-    embeddings_file: /sc/arion/work/fratac01/data/al/esm/HXK4_esm2_t33_650M_UR50D.csv
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/win_pool_8_5/HXK4_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/HXK4.fasta
   KCNE1:
     data_loader_type: file_loader
@@ -603,7 +661,7 @@ datasets:
       id_col: "mutant"
       # sequence_col: "mutant"
       score_col: "DMS_score"
-    embeddings_file: /sc/arion/work/fratac01/data/al/esm/PTEN_esm2_t33_650M_UR50D.csv
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/win_pool_8_5/PTEN_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/PTEN.fasta
   RAF1:
     data_loader_type: file_loader
@@ -683,7 +741,7 @@ datasets:
       id_col: "mutant"
       # sequence_col: "mutant"
       score_col: "DMS_score"
-    embeddings_file: /sc/arion/work/fratac01/data/al/esm/SRC_esm2_t33_650M_UR50D.csv
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/win_pool_8_5/SRC_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/SRC.fasta
   SUMO1:
     data_loader_type: file_loader
@@ -763,11 +821,11 @@ datasets:
       id_col: "variant_id"
       # sequence_col: "mutant"
       score_col: "z_score"
-    embeddings_file: /sc/arion/work/fratac01/data/al/esm/MC4R_esm2_t33_650M_UR50D.csv
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/win_pool_8_5/MC4R_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/MC4R.fasta
   ACVRL1:
     data_loader_type: file_loader_fasta_only
-    wild_type_id: "P37023_wildtype"
+    wild_type_id: "wildtype"
     column_names:
       id_col: "variant_id"
     fasta_file: /sc/arion/work/fratac01/data/al/dms/ACVRL1.fasta
@@ -799,18 +857,22 @@ c1:
       substitution_col: "variant"
   embedder:
     type: file_loader
-    model_name: esm2_t2_8M_UR50D
+    model_name: esm2_t6_8M_UR50D
     # embeddings_file: ../../data/al/esm/brenan1_esm2_t6_8M_UR50D.csv
     embeddings_file: ../../data/al/esm/cas12f_esm2_t6_8M_UR50D.csv
   embedder1:
     type: esm
-    model_name: esm2_t2_8M_UR50D
+    model_name: esm2_t6_8M_UR50D
     parameters:
       cache_dir: "./model_cache"
       device: "cpu"
       batch_size: 8
-      use_pooling: true
       quantize: false
+      compression:
+        method: window_pooling # options: [none, mean_pooling, max_pooling, window_pooling]
+        num_segments: 8
+        overlap_fraction: 0.5
+        pool_method: mean  # options: [mean, max]
 c2:
   data_loader:
     type: file_loader

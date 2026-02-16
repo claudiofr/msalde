@@ -29,7 +29,13 @@ class ESMEmbedder(ProteinEmbedder):
         self._model_name = config.model_name
         config = config.parameters
         self._batch_size = config.batch_size
-        self._use_pooling = config.use_pooling
+        compression_config = config.get("compression", {})
+        self._compression_method = compression_config.get("method", "none")
+        self._compression_num_segments = compression_config.get("num_segments", 1)
+        self._compression_overlap_fraction = compression_config.get(
+            "overlap_fraction", 0.0)
+        self._compression_pool_method = compression_config.get(
+            "pool_method", "mean")
 
         # Set device
         self._device = (
@@ -69,6 +75,134 @@ class ESMEmbedder(ProteinEmbedder):
         # Get embedding dimension
         self._embedding_dim = self._model.config.hidden_size
 
+    def window_pool_embeddings(
+        self,
+        embeddings,        # (B, L, D)
+        attention_masks,   # (B, L, 1)
+        num_segments=8,
+        overlap_frac=0.5,
+        pool="mean"
+    ):
+        """
+        Adaptive window pooling:
+        - Uses each sequence's true length (from attention mask)
+        - Computes window boundaries proportionally per sequence
+        - Supports mean or max pooling
+        - Returns (B, num_segments * D)
+        """
+
+        B, L, D = embeddings.shape
+
+        # True lengths per sequence: (B,)
+        true_lengths = attention_masks.squeeze(-1).sum(dim=1)
+
+        # Compute window sizes per sequence: (B,)
+        window_sizes = (true_lengths // num_segments).clamp(min=1)
+
+        # Overlap and stride per sequence: (B,)
+        overlaps = (window_sizes * overlap_frac).long()
+        strides = (window_sizes - overlaps).clamp(min=1)
+
+        pooled_segments = []
+
+        for seg in range(num_segments):
+            # Compute start and end indices for each sequence: (B,)
+            starts = seg * strides
+            ends = starts + window_sizes
+
+            # Clamp to true lengths
+            ends = torch.minimum(ends, true_lengths)
+
+            # Build a mask of shape (B, L) indicating which positions fall in the window
+            idxs = torch.arange(L, device=embeddings.device).unsqueeze(0)  # (1, L)
+            starts_exp = starts.unsqueeze(1)  # (B, 1)
+            ends_exp = ends.unsqueeze(1)      # (B, 1)
+
+            # Window mask: True where start <= idx < end
+            window_mask = (idxs >= starts_exp) & (idxs < ends_exp)  # (B, L)
+
+            # Combine with attention mask to exclude padding
+            window_mask = window_mask & (attention_masks.squeeze(-1).bool())  # (B, L)
+
+            # Expand to (B, L, D)
+            window_mask_exp = window_mask.unsqueeze(-1)
+
+            if pool == "mean":
+                masked = embeddings * window_mask_exp
+                summed = masked.sum(dim=1)                     # (B, D)
+                counts = window_mask_exp.sum(dim=1).clamp(min=1e-6)  # (B, 1)
+                pooled_vec = summed / counts                   # (B, D)
+
+            elif pool == "max":
+                neg_inf = torch.finfo(embeddings.dtype).min
+                masked = embeddings.masked_fill(~window_mask_exp, neg_inf)
+                pooled_vec = masked.max(dim=1).values          # (B, D)
+
+            else:
+                raise ValueError("pool must be 'mean' or 'max'")
+
+            pooled_segments.append(pooled_vec)
+
+        # (B, num_segments, D)
+        pooled = torch.stack(pooled_segments, dim=1)
+
+        # Flatten to (B, num_segments * D)
+        return pooled.reshape(B, num_segments * D)
+
+
+    def window_pool_embeddings1(self, embeddings, attention_masks, 
+                               num_segments=8, overlap_frac=0.5, pool="mean"):
+        """
+        Pool embeddings using a sliding window approach.
+        Ignores attention_masks parameters for now, but can 
+        be used to mask out padding tokens in the future.
+        For now we assume that all sequences are of the 
+        same length and that there is no padding.
+
+        embeddings: Tensor of shape (N, L, d)
+        attention_masks: ignored for now
+        returns: Tensor of shape (N, num_segments * d)
+        """
+        N, L, d = embeddings.shape
+
+        # Base window size: exactly L / num_segments
+        window_size = max(1, L // num_segments)
+
+        # Overlap in residues
+        overlap = int(window_size * overlap_frac)
+
+        # Effective stride
+        stride = max(1, window_size - overlap)
+
+        pooled = []
+
+        for i in range(num_segments):
+            start = i * stride
+            end = start + window_size
+
+            # Clamp to sequence boundaries
+            if end > L:
+                end = L
+                start = max(0, end - window_size)
+
+            # Slice each protein's window: (N, window_size, d)
+            window = embeddings[:, start:end, :]
+
+            if pool == "mean":
+                pooled_vec = window.mean(dim=1)      # (N, d)
+            elif pool == "max":
+                pooled_vec = window.max(dim=1).values  # (N, d)
+            else:
+                raise ValueError("pool must be 'mean' or 'max'")
+
+            pooled.append(pooled_vec)
+
+        # pooled is a list of num_segments tensors, each (N, d)
+        pooled = torch.stack(pooled, dim=1)  # (N, num_segments, d)
+
+        # Flatten segments if you want a single vector per protein
+        return pooled.reshape(N, num_segments * d)
+
     def embed_sequence(self, sequence: str) -> np.ndarray:
         """
         Embed a single protein sequence.
@@ -91,12 +225,21 @@ class ESMEmbedder(ProteinEmbedder):
         embeddings = outputs.last_hidden_state
 
         # Apply pooling if requested
-        if self._use_pooling:
+        attention_masks = inputs["attention_mask"].unsqueeze(-1)  # Shape: (1, seq_len, 1)
+        if self._compression_method == "window_pooling":
+            # Window pooling
+            embeddings = self.window_pool_embeddings(
+                embeddings,
+                attention_masks=attention_masks,
+                num_segments=self._compression_num_segments,
+                overlap_frac=self._compression_overlap_fraction,
+                pool=self._compression_pool_method
+            )
+        elif self._compression_method == "mean_pooling":
             # Mean pooling (excluding special tokens)
-            attention_mask = inputs["attention_mask"]
             embeddings = torch.sum(
-                embeddings * attention_mask.unsqueeze(-1), dim=1
-            ) / torch.sum(attention_mask, dim=1, keepdim=True)
+                embeddings * attention_masks, dim=1
+            ) / torch.sum(attention_masks, dim=1, keepdim=True)
         else:
             # Use CLS token
             embeddings = embeddings[:, 0]
@@ -131,13 +274,30 @@ class ESMEmbedder(ProteinEmbedder):
             # Get last hidden state
             embeddings = outputs.last_hidden_state
 
+            attention_mask = inputs["attention_mask"].unsqueeze(-1)  # Shape: (batch_size, seq_len, 1)
             # Apply pooling if requested
-            if self._use_pooling:
+            if self._compression_method == "window_pooling":
+                # Window pooling
+                embeddings = self.window_pool_embeddings(
+                    embeddings,
+                    attention_masks=attention_mask,
+                    num_segments=self._compression_num_segments,
+                    overlap_frac=self._compression_overlap_fraction,
+                    pool=self._compression_pool_method
+                )
+            elif self._compression_method == "mean_pooling":
                 # Mean pooling (excluding special tokens)
-                attention_mask = inputs["attention_mask"]
-                embeddings = torch.sum(
-                    embeddings * attention_mask.unsqueeze(-1), dim=1
-                ) / torch.sum(attention_mask, dim=1, keepdim=True)
+                # Mask out padding tokens
+                masked_embeddings = embeddings * attention_mask  # (B, L, D)
+
+                # Sum over sequence dimension
+                summed = masked_embeddings.sum(dim=1)            # (B, D)
+
+                # Count real tokens per sequence
+                counts = attention_mask.sum(dim=1)               # (B, 1)
+
+                # Safe division
+                embeddings = summed / counts                     # (B, D)
             else:
                 # Use CLS token
                 embeddings = embeddings[:, 0]
@@ -149,6 +309,7 @@ class ESMEmbedder(ProteinEmbedder):
             )
 
         return all_embeddings
+
 
     def embed_variants(self, variants: list[Variant]) -> list[np.ndarray]:
         """

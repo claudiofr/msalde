@@ -1,6 +1,6 @@
-from msalde.container import ALDEContainer
 import argparse
 import pandas as pd
+from msalde.container import ALDEContainer
 
 datasets = [
     "ADRB2",
@@ -157,12 +157,12 @@ def run_maves(label_dir, datasets, config_file,
         run_sim_func = run_simulation_mc
         run_sim_func = run_save_all_predictions
 
-        run_sim_func(simulator, "c10", "ESM2_LLR", dataset,
-                     num_rounds=2,
-                     num_simulations=1,
-                     num_selected_variants_first_round=1,
-                     num_top_acquisition_score_variants_per_round=
-                     num_top_acquire_variants_per_round)
+        run_sim_func(simulator, "c3_1", "RF_AL_WINP8_5", dataset,
+                          num_rounds=5,
+                          num_simulations=5,
+                          num_selected_variants_first_round=16,
+                          num_top_acquisition_score_variants_per_round=
+                          num_top_acquire_variants_per_round)
         continue
         run_sim_func(simulator, "c3_1", "RF_AL", dataset,
                           num_rounds=5,
@@ -170,6 +170,13 @@ def run_maves(label_dir, datasets, config_file,
                           num_selected_variants_first_round=16,
                           num_top_acquisition_score_variants_per_round=
                           num_top_acquire_variants_per_round)
+        continue
+        run_sim_func(simulator, "c10", "ESM2_LLR", dataset,
+                     num_rounds=2,
+                     num_simulations=1,
+                     num_selected_variants_first_round=1,
+                     num_top_acquisition_score_variants_per_round=
+                     num_top_acquire_variants_per_round)
         # continue
         first_round_vars = int(0.2 * df.shape[0])
         run_sim_func(simulator, "c3_2", "RFTRAIN_ALL", dataset,
