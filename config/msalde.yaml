@@ -1,3 +1,6 @@
+general:
+  store_acquired_variants: true
+  data_output_dir: "./output/data"
 db:
   url: "sqlite:///./db/msalde.db"
 sub_runs:
@@ -7,17 +10,30 @@ external_repo:
 embedding_extractor:
   type: esm
   model_name: facebook/esm2_t6_8M_UR50D
-  output_dir: "/home/claudiof/win_wsl_home/data/al/esm/win_pool_8_5"
+  output_dir1: "/home/claudiof/win_wsl_home/data/al/esm/win_pool_8_5"
+  output_dir: "/home/claudiof/win_wsl_home/data/al/esm/fv_64_64"
   parameters:
     cache_dir: "./model_cache"
     device: "cpu"
     batch_size: 8
     quantize: false
-    compression:
-      method: window_pooling # options: [none, mean_pooling, max_pooling, window_pooling]
+    compression0:
+       method: mean_pooling
+    compression1:
+      method: window_pooling # options: [none, mean_pooling, max_pooling, window_pooling, cnn]
       num_segments: 8
       overlap_fraction: 0.5
       pool_method: mean  # options: [mean, max]
+    compression2:
+      method: cnn # options: [none, mean_pooling, max_pooling, window_pooling]
+      num_filters: 640
+      kernel_sizes: [7, 9, 11]
+    compression:
+      method: fisher_vector
+      normalize: true
+      num_gaussian_mixture_components: 64
+      pca_dim: 64
+      random_state: 42
 variant_ref:
   db:
     url: "sqlite:///./db/variant_ref.db"
@@ -92,8 +108,6 @@ datasets:
     column_names:
       id_col: "variant_id"
     fasta_file: /home/claudiof/win_wsl_home/data/al/dms/ACVRL1.fasta
-general:
-  store_acquired_variants: true
 c1:
   default_dataset: cas12f
   data_loader:
