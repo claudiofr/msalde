@@ -17,17 +17,23 @@ variant_ref:
 embedding_extractor:
   type: esm
   model_name: facebook/esm2_t33_650M_UR50D
-  output_dir: /sc/arion/work/fratac01/data/al/esm/win_pool_8_5
+  output_dir: /sc/arion/work/fratac01/data/al/esm/fv_64_64
   parameters:
     cache_dir: "./model_cache"
-    device: "gpu"
+    device: # "cuda"
     batch_size: 8
     quantize: false
-    compression:
+    compression1:
       method: window_pooling # options: [none, mean_pooling, max_pooling, window_pooling]
       num_segments: 8
       overlap_fraction: 0.5
       pool_method: mean  # options: [mean, max]
+    compression:
+      method: fisher_vector
+      normalize: true
+      num_gaussian_mixture_components: 64
+      pca_dim: 64
+      random_state: 42
 pdb_repository:
   datasets:
     SRC:
@@ -531,7 +537,7 @@ datasets:
       id_col: "mutant"
       # sequence_col: "mutant"
       score_col: "DMS_score"
-    embeddings_file: /sc/arion/work/fratac01/data/al/esm/win_pool_8_5/HXK4_esm2_t33_650M_UR50D.csv
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/fv_64_64/HXK4_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/HXK4.fasta
   KCNE1:
     data_loader_type: file_loader
@@ -661,7 +667,7 @@ datasets:
       id_col: "mutant"
       # sequence_col: "mutant"
       score_col: "DMS_score"
-    embeddings_file: /sc/arion/work/fratac01/data/al/esm/win_pool_8_5/PTEN_esm2_t33_650M_UR50D.csv
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/fv_64_64/PTEN_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/PTEN.fasta
   RAF1:
     data_loader_type: file_loader
@@ -741,7 +747,7 @@ datasets:
       id_col: "mutant"
       # sequence_col: "mutant"
       score_col: "DMS_score"
-    embeddings_file: /sc/arion/work/fratac01/data/al/esm/win_pool_8_5/SRC_esm2_t33_650M_UR50D.csv
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/fv_64_64/SRC_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/SRC.fasta
   SUMO1:
     data_loader_type: file_loader
@@ -821,7 +827,7 @@ datasets:
       id_col: "variant_id"
       # sequence_col: "mutant"
       score_col: "z_score"
-    embeddings_file: /sc/arion/work/fratac01/data/al/esm/win_pool_8_5/MC4R_esm2_t33_650M_UR50D.csv
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/fv_64_64/MC4R_esm2_t33_650M_UR50D.csv
     fasta_file: /sc/arion/work/fratac01/data/al/dms/MC4R.fasta
   ACVRL1:
     data_loader_type: file_loader_fasta_only

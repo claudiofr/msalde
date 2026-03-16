@@ -12,25 +12,37 @@ class EmbeddingExtractor:
             embedder_config,
             datasets_config: dict[str, dict],
     ):
+        self._embedder_config = embedder_config
+        self._embedder = None
         self._datasets_config = datasets_config
         if "type" not in embedder_config:
             raise ValueError(f"Embedder type not specified in config")
-        embedder_factory = protein_embedder_factories.get(embedder_config.type)
-        if embedder_factory is None:
+        self._embedder_factory = protein_embedder_factories.get(
+            embedder_config.type)
+        if self._embedder_factory is None:
             raise ValueError(
                 f"Unknown embedder type: {embedder_config.type}. "
                 f"Available types: {list(protein_embedder_factories.keys())}"
             )
-        self._embedder = embedder_factory.create_instance(
-            embedder_config, None)
         self._output_dir = embedder_config.get("output_dir")
         self._model_name = embedder_config.get("model_name")
+    
+    def get_embedder(self):
+        """
+        Assume single threaded execution, so we can cache the embedder
+        instance simply without lazy loading with double checked locking.
+        """
+        if self._embedder is None:
+            self._embedder = self._embedder_factory.create_instance(
+                self._embedder_config, None)
+        return self._embedder
         
     def extract_by_fasta_file(self, dataset_name: str, fasta_file: str,
                               output_dir: str):
         sequences = [(record.id, str(record.seq))
                       for record in SeqIO.parse(fasta_file, "fasta")]
-        seq_embeddings = self._embedder.embed_sequences([seq for _, seq in sequences])
+        seq_embeddings = self.get_embedder().embed_sequences(
+            [seq for _, seq in sequences])
         model_name = self._model_name.split("/")[-1]  # Get model name without path
         output_path = Path(output_dir) / f"{dataset_name}_{model_name}.csv"
         with open(output_path, "w", newline="") as f:
@@ -51,5 +63,6 @@ class EmbeddingExtractor:
         if fasta_file is None:
             raise ValueError(f"FASTA file not specified for dataset '{dataset_name}'")
         self.extract_by_fasta_file(dataset_name, fasta_file, self._output_dir)
+        print('Done extracting embeddings for dataset:', dataset_name)
 
 

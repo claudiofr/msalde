@@ -6,6 +6,58 @@ from typing import Optional
 
 import torch
 from transformers import AutoModel, AutoTokenizer
+from sklearn.mixture import GaussianMixture
+
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class CNNSequenceCompressor(nn.Module):
+    """
+    Compresses per-residue embeddings (L, d) into a fixed-length vector
+    using multi-kernel 1D CNN + global max pooling.
+    """
+    def __init__(self, embed_dim, num_filters=128, kernel_sizes=(3, 5, 7)):
+        super().__init__()
+        
+        self.convs = nn.ModuleList([
+            nn.Conv1d(
+                in_channels=embed_dim,
+                out_channels=num_filters,
+                kernel_size=k,
+                padding=k // 2   # keep length same
+            )
+            for k in kernel_sizes
+        ])
+        
+        self.output_dim = num_filters * len(kernel_sizes)
+
+    def forward(self, x, mask=None):
+        """
+        x: (batch, L, d)
+        mask: (batch, L) with 1 for valid residues, 0 for padding
+        """
+        # Convert to (batch, d, L) for Conv1d
+        x = x.transpose(1, 2)
+
+        conv_outputs = []
+        for conv in self.convs:
+            h = conv(x)              # (batch, num_filters, L)
+            h = F.relu(h)
+
+            if mask is not None:
+                # mask: (batch, L) → (batch, 1, L)
+                m = mask.unsqueeze(1)
+                h = h.masked_fill(m == 0, float('-inf'))
+
+            # Global max pooling over sequence length
+            pooled = torch.max(h, dim=2).values  # (batch, num_filters)
+            conv_outputs.append(pooled)
+
+        # Concatenate pooled outputs
+        return torch.cat(conv_outputs, dim=1)  # (batch, num_filters * len(kernel_sizes))
 
 
 class ESMEmbedder(ProteinEmbedder):
@@ -31,11 +83,6 @@ class ESMEmbedder(ProteinEmbedder):
         self._batch_size = config.batch_size
         compression_config = config.get("compression", {})
         self._compression_method = compression_config.get("method", "none")
-        self._compression_num_segments = compression_config.get("num_segments", 1)
-        self._compression_overlap_fraction = compression_config.get(
-            "overlap_fraction", 0.0)
-        self._compression_pool_method = compression_config.get(
-            "pool_method", "mean")
 
         # Set device
         self._device = (
@@ -74,6 +121,162 @@ class ESMEmbedder(ProteinEmbedder):
 
         # Get embedding dimension
         self._embedding_dim = self._model.config.hidden_size
+        if self._compression_method == "window_pooling":
+            self._compression_num_segments = compression_config.get("num_segments", 1)
+            self._compression_overlap_fraction = compression_config.get(
+                "overlap_fraction", 0.0)
+            self._compression_pool_method = compression_config.get(
+                "pool_method", "mean")
+        elif self._compression_method == "cnn":
+            self._cnn_compressor = CNNSequenceCompressor(
+                embed_dim=self._embedding_dim,
+                num_filters=compression_config.get("num_filters", 128),
+                kernel_sizes=compression_config.get("kernel_sizes", [3, 5, 7])
+            )
+        elif self._compression_method == "fisher_vector":
+            self._normalize = compression_config.get(
+                "normalize", True)
+            self._num_gaussian_mixture_components = compression_config.get(
+                "num_gaussian_mixture_components", 64)
+            self._pca_dim = compression_config.get("pca_dim", 64)
+            self._random_state = compression_config.get(
+                "random_state", 42)
+
+    def _fit_gaussian_mixture_model(
+        self,
+        embeddings: np.ndarray,
+        padding_mask: np.ndarray,
+        n_components: int = 64,
+        pca_dim: int | None = 64,
+        random_state: int = 42,
+    ) -> tuple[GaussianMixture, object | None]:
+        """
+        Fit a diagonal-covariance GMM on pooled residue embeddings.
+
+        Args:
+            embeddings:    (B, L, D) padded residue embedding array.
+            padding_mask:  (B, L) bool array — True for real residues.
+            n_components:  Number of Gaussian components (K).
+            pca_dim:       Reduce to this many dimensions before GMM fitting.
+                        Strongly recommended for high-D ESM2 embeddings.
+                        Set to None to skip PCA.
+            random_state:  RNG seed.
+
+        Returns:
+            gmm: Fitted GaussianMixture object.
+            pca: Fitted PCA object, or None if pca_dim is None.
+        """
+        from sklearn.decomposition import PCA
+
+        # Flatten to (N_real_residues, D) using the mask
+        all_residues = embeddings[padding_mask]   # boolean index → (N, D)
+        print(f"Fitting GMM on {all_residues.shape[0]:,} residue embeddings "
+            f"of dimension {all_residues.shape[1]}")
+
+        pca = None
+        if pca_dim is not None:
+            pca = PCA(n_components=pca_dim, random_state=random_state)
+            all_residues = pca.fit_transform(all_residues)
+            print(f"PCA variance explained: "
+                f"{pca.explained_variance_ratio_.sum():.3f}")
+
+        gmm = GaussianMixture(
+            n_components=n_components,
+            covariance_type="diag",
+            max_iter=500,
+            random_state=random_state,
+            verbose=1,
+        )
+        gmm.fit(all_residues)
+        print(f"GMM fitted. Final lower bound: {gmm.lower_bound_:.4f}")
+
+        return gmm, pca
+
+    def _compute_fisher_vector(
+        self,
+        residues: np.ndarray,
+        gmm: GaussianMixture,
+        normalized: bool = True,
+    ) -> np.ndarray:
+        """
+        Compute the Fisher Vector for a single protein (no padding).
+
+        Args:
+            residues:   (L, D) real residue embeddings (padding already removed).
+            gmm:        Fitted GaussianMixture (covariance_type="diag").
+            normalized: Apply power normalisation then L2 normalisation.
+
+        Returns:
+            fv: 1D Fisher Vector of length 2 * K * D.
+        """
+        L = residues.shape[0]
+        K = gmm.n_components
+        pi  = gmm.weights_       # (K,)
+        mu  = gmm.means_         # (K, D)
+        sig = gmm.covariances_   # (K, D)
+
+        gamma = gmm.predict_proba(residues)   # (L, K)
+
+        diff = residues[:, np.newaxis, :] - mu[np.newaxis, :, :]   # (L, K, D)
+        g    = gamma[:, :, np.newaxis]                              # (L, K, 1)
+
+        s1 = (g * diff / sig[np.newaxis]).sum(axis=0)                    # (K, D)
+        s2 = (g * (diff ** 2 / sig[np.newaxis] - 1)).sum(axis=0)         # (K, D)
+
+        sqrt_pi = np.sqrt(pi)[:, np.newaxis]   # (K, 1)
+        s1 = s1 / (L * sqrt_pi)
+        s2 = s2 / (L * sqrt_pi)
+
+        fv = np.concatenate([s1.ravel(), s2.ravel()])   # (2*K*D,)
+
+        if normalized:
+            fv = np.sign(fv) * np.sqrt(np.abs(fv))      # power normalisation
+            norm = np.linalg.norm(fv)
+            if norm > 0:
+                fv = fv / norm                           # L2 normalisation
+
+        return fv
+
+    def fisher_vector_encode_embeddings(
+        self,
+        embeddings,        # (B, L, D)
+        attention_masks,   # (B, L, 1)
+        normalize: bool = True,
+        num_components: int = 64,
+        pca_dim: int | None = 64,
+        random_state: int = 42,
+    ):
+        """
+        Adaptive window pooling:
+        - Uses each sequence's true length (from attention mask)
+        - Computes window boundaries proportionally per sequence
+        - Supports mean or max pooling
+        - Returns (B, num_segments * D)
+        """
+
+        B, L, D = embeddings.shape
+        attention_masks = attention_masks.squeeze(-1).bool()  # (B, L)
+        gmm, pca = self._fit_gaussian_mixture_model(
+            embeddings,
+            attention_masks,
+            n_components=num_components,
+            pca_dim=pca_dim,
+            random_state=random_state
+        )
+        B = embeddings.shape[0]
+        fisher_vectors = []
+
+        for i in range(B):
+            residues = embeddings[i, attention_masks[i], :]   # (L_i, D) — no padding
+            if pca is not None:
+                residues = pca.transform(residues)
+            fv = self._compute_fisher_vector(residues, gmm,
+                                             normalized=normalize)
+            fisher_vectors.append(fv)
+            if (i + 1) % 100 == 0:
+                print(f"Encoded {i + 1}/{B} proteins")
+
+        return torch.Tensor(np.vstack(fisher_vectors))   # (B, 2*K*D)
 
     def window_pool_embeddings(
         self,
@@ -240,6 +443,20 @@ class ESMEmbedder(ProteinEmbedder):
             embeddings = torch.sum(
                 embeddings * attention_masks, dim=1
             ) / torch.sum(attention_masks, dim=1, keepdim=True)
+        elif self._compression_method == "cnn":
+            # CNN-based compression
+            embeddings = self._cnn_compressor(embeddings,
+                                              mask=inputs["attention_mask"])
+        elif self._compression_method == "fisher_vector":
+            # Fisher vector compression
+            embeddings = self.fisher_vector_encode_embeddings(
+                embeddings,
+                attention_masks=attention_masks,
+                normalize=self._normalize,
+                num_components=self._num_gaussian_mixture_components,
+                pca_dim=self._pca_dim,
+                random_state=self._random_state
+            )
         else:
             # Use CLS token
             embeddings = embeddings[:, 0]
@@ -298,6 +515,20 @@ class ESMEmbedder(ProteinEmbedder):
 
                 # Safe division
                 embeddings = summed / counts                     # (B, D)
+            elif self._compression_method == "cnn":
+                # CNN-based compression
+                embeddings = self._cnn_compressor(
+                    embeddings, mask=inputs["attention_mask"])
+            elif self._compression_method == "fisher_vector":
+                # Fisher vector compression
+                embeddings = self.fisher_vector_encode_embeddings(
+                    embeddings,
+                    attention_masks=attention_mask,
+                    normalize=self._normalize,
+                    num_components=self._num_gaussian_mixture_components,
+                    pca_dim=self._pca_dim,
+                    random_state=self._random_state
+                )
             else:
                 # Use CLS token
                 embeddings = embeddings[:, 0]

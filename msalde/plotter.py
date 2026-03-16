@@ -48,6 +48,8 @@ class ALDEPlotter:
                                          count_label: str,
                                          ss_track: list, residue_nums: list,
                                          domains: list,
+                                         gof_assay_threshold,
+                                         lof_assay_threshold,
                                          title):
 
         line_styles = ['-', '--', '-.', ':']
@@ -101,6 +103,10 @@ class ALDEPlotter:
                               where=(assay_scores > prediction_scores), color='lightcoral', alpha=0.5)
         axes_middle.fill_between(position, assay_scores, prediction_scores,
                               where=(assay_scores < prediction_scores), color='yellow', alpha=0.5)
+        axes_middle.axhline(y=gof_assay_threshold, color='lightgray',
+                            linestyle='dashed', linewidth=1.5)
+        axes_middle.axhline(y=lof_assay_threshold, color='lightgray',
+                            linestyle='dashed', linewidth=1.5)
         axes_middle.legend(loc='lower right', bbox_to_anchor=(1.1, 0.8))
         axes_bottom.plot(position, counts, linestyle='-', color=colors[2],
                          label=count_label)
@@ -288,7 +294,9 @@ class ALDEPlotter:
             raise ValueError("Too many result sets to plot; increase color palette.")
 
         # We will build custom x-tick labels with domain names and +/- counts
-        # in xtick_label_info_list. Each element in the list corresponds to a 
+        # in xtick_label_info_list. We only do this if the keys,
+        # "num_positive" and "num_negative" exist in the result dict.
+        # Each element in the list corresponds to a 
         # tuple with the first element being the domain name and the second element
         # being a list of (num_positive, num_negative) tuples for each result set in
         # results_list. So the structure will be:
@@ -297,6 +305,7 @@ class ALDEPlotter:
         # list of counts for each plot represented in results_list.
 
         xtick_label_info_list = None
+        display_domain_counts = True
         for i, result_dict in enumerate(results_list):
             results = result_dict["results"]
             label = result_dict["label"]
@@ -307,6 +316,9 @@ class ALDEPlotter:
                 xtick_label_info_list = [(domain_name, []) for domain_name in domain_names]
             # Update the counts for each domain
             for domain_ind, result in results.iterrows():
+                if "num_positive" not in result:
+                    display_domain_counts = False
+                    break
                 xtick_label_info_list[domain_ind][1].append((result["num_positive"], result["num_negative"]))
             axes.plot(domain_names,
                       results["metric"],
@@ -327,6 +339,8 @@ class ALDEPlotter:
         positions = axes.get_xticks() 
         for xpos, label_info in zip(positions, xtick_label_info_list):
             axes.text(xpos, -0.1, label_info[0], ha="center", va="top", transform=axes.get_xaxis_transform() )
+            if not display_domain_counts:
+                continue
             for i, (variant_counts, color) in enumerate(zip(label_info[1], colors[:len(results_list)])):
                 text = f"+{variant_counts[0]}/-{variant_counts[1]}"
                 axes.text(xpos, -0.2 - 0.08*i, text, ha="center", va="top", color=color, transform=axes.get_xaxis_transform() )
