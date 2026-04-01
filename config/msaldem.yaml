@@ -20,7 +20,7 @@ embedding_extractor:
   output_dir: /sc/arion/work/fratac01/data/al/esm/fv_64_64
   parameters:
     cache_dir: "./model_cache"
-    device: # "cuda"
+    device: "cuda"
     batch_size: 8
     quantize: false
     compression1:

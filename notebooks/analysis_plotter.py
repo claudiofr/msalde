@@ -11,6 +11,7 @@ import matplotlib.gridspec as gridspec
 from msalde.container import ALDEContainer
 from msalde.ml_util import calculate_optimal_youden_index
 from msalde.plotter import ALDEPlotter
+from msalde.query_repository import ALDEQueryRepository
 from msalde.variant_util import variant_id_to_position
 
 DATASETS = [
@@ -76,6 +77,23 @@ aminos = ['L', 'A', 'G', 'V', 'S', 'E', 'R', 'T', 'I', 'D', 'P', 'K', 'Q',
 
 def get_amino_acid_index(aa: str) -> int:
     return aminos.index(aa)
+
+def get_last_round_scores_by_config_dataset_run(
+        repo: ALDEQueryRepository,
+        config_id,
+        dataset_name,
+        run_name):
+    run = repo.get_run_by_config_dataset_run(
+              config_id, dataset_name, run_name)
+    if run.n_fold_cv:
+        return repo.get_n_fold_cv_scores_by_config_dataset_run(
+            config_id=config_id,
+            dataset_name=dataset_name,
+            run_name=run_name)
+    return repo.get_last_round_scores_by_config_dataset_run(
+        config_id=config_id,
+        dataset_name=dataset_name,
+        run_name=run_name)
 
 def standardize_scores(results: pd.DataFrame) -> pd.DataFrame:
     results['assay_score'] = (
@@ -290,7 +308,7 @@ def compute_gof_lof_by_z_score_q_value(
 
 
 def show_last_round_mse_by_domain(
-        repo, var_repo, plotter: ALDEPlotter, axes,
+        repo: ALDEQueryRepository, var_repo, plotter: ALDEPlotter, axes,
         assay_source, protein_symbol, plot_info_list,
         class_label_column,
         domains: list,
@@ -300,7 +318,7 @@ def show_last_round_mse_by_domain(
     mse_results_list = []
     for plot_info in plot_info_list:
         gc.collect(1)
-        results = repo.get_last_round_scores_by_config_dataset_run(
+        results = repo.get_last_round_scores_by_simulation_by_config_dataset_run(
             config_id=plot_info["config_id"],
             dataset_name=assay_source,
             run_name=plot_info["run_name"])
@@ -316,20 +334,31 @@ def show_last_round_mse_by_domain(
                 domain["start"], domain["end"])]
             if len(domain_results) == 0:
                 continue
-            mse = np.mean(domain_results['prediction_score'] -
-                          domain_results['assay_score'])
-            mse_rows.append(
-                {
-                "domain": domain,
-                "metric": mse
-                })
+            simulation_domain_results = domain_results.groupby("simulation_num")
+            for simulation_num, sim_domain_results in simulation_domain_results:
+                signed_error = sim_domain_results['prediction_score'] - \
+                            sim_domain_results['assay_score'] 
+                mse = np.mean(signed_error)
+                mse_rows.append(
+                    {
+                    "domain": domain["name"],
+                    "domain_start": domain["start"],
+                    "domain_end": domain["end"],
+                    "simulation_num": simulation_num,
+                    "metric": mse,
+                    })
 
         mse_results = pd.DataFrame(mse_rows)
+        mse_results = mse_results.groupby(
+            ["domain", "domain_start", "domain_end"]).agg(
+            metric=("metric", "mean"),
+            metric_std=("metric", "std")
+        ).reset_index()
 
         mse_results_list.append({"label": plot_info['label'],
                                 "results": mse_results})
     run_names = set([plot_info['run_name'] for plot_info in plot_info_list])
-    if len(run_names) == 1:
+    if len(run_names) == 0: #1:
         title = f"{assay_source}/{run_names.pop()}"
     else:
         title = f"{assay_source}"
@@ -340,11 +369,12 @@ def show_last_round_mse_by_domain(
         all_data_dfs = []
         for mse_results in mse_results_list:
             data_df = pd.DataFrame()
-            data_df["domain"] = mse_results["results"]["domain"].apply(lambda d: d["name"]) 
-            data_df["domain_start"] = mse_results["results"]["domain"].apply(lambda d: d["start"])
-            data_df["domain_end"] = mse_results["results"]["domain"].apply(lambda d: d["end"])
+            data_df["domain"] = mse_results["results"]["domain"]
+            data_df["domain_start"] = mse_results["results"]["domain_start"]
+            data_df["domain_end"] = mse_results["results"]["domain_end"]
             data_df["assay_source"] = assay_source
             data_df["metric"] = mse_results["results"]["metric"]
+            data_df["metric_std"] = mse_results["results"]["metric_std"]
             data_df["model"] = mse_results["label"]
             all_data_dfs.append(data_df)
         return len(results), pd.concat(all_data_dfs, ignore_index=True)
@@ -367,7 +397,7 @@ def show_last_round_auc_by_domain(
         config_id = plot_info["config_id"]
         run_name = plot_info["run_name"]
         if config_id != last_config_id or run_name != last_run_name:
-            results_all = repo.get_last_round_scores_by_config_dataset_run(
+            results_all = repo.get_last_round_scores_by_simulation_by_config_dataset_run(
                 config_id=config_id,
                 dataset_name=assay_source,
                 run_name=run_name)
@@ -410,6 +440,29 @@ def show_last_round_auc_by_domain(
                 domain["start"], domain["end"])]
             if len(domain_results) == 0:
                 continue
+            simulation_domain_results = domain_results.groupby("simulation_num")
+            for simulation_num, sim_domain_results in simulation_domain_results:
+                optimal_youden_index, fpr, tpr, _ = calculate_optimal_youden_index(
+                        sim_domain_results[class_label_column].values,
+                        sim_domain_results['prediction_score'].values)
+                auc = roc_auc_score(
+                    sim_domain_results[class_label_column].values,
+                    sim_domain_results['prediction_score'].values)
+                num_positive = sim_domain_results[class_label_column].sum()
+                num_negative = len(sim_domain_results) - num_positive
+                auc_rows.append(
+                    {
+                    "domain": domain["name"],
+                    "domain_start": domain["start"],
+                    "domain_end": domain["end"],
+                    "simulation_num": simulation_num,
+                    "metric": auc,
+                    "optimal_youden_index": optimal_youden_index,
+                    "num_positive": num_positive,
+                    "num_negative": num_negative
+                    })
+
+            """
             optimal_youden_index, fpr, tpr, _ = calculate_optimal_youden_index(
                     domain_results[class_label_column].values,
                     domain_results['prediction_score'].values)
@@ -420,16 +473,28 @@ def show_last_round_auc_by_domain(
             auc_rows.append(
                 {"metric": auc,
                 "optimal_youden_index": optimal_youden_index,
-                "domain": domain,
+                "domain": domain["name"],
+                "domain_start": domain["start"],
+                "domain_end": domain["end"],
                 "num_positive": num_positive,
                 "num_negative": num_negative})
+            """
 
         auc_results = pd.DataFrame(auc_rows)
+        auc_results = auc_results.groupby(
+            ["domain", "domain_start", "domain_end"]).agg(
+            metric=("metric", "mean"),
+            metric_std=("metric", "std"),
+            optimal_youden_index=("optimal_youden_index", "mean"),
+            optimal_youden_index_std=("optimal_youden_index", "std"),
+            num_positive=("num_positive", "max"),
+            num_negative=("num_negative", "max")
+        ).reset_index()
         auc_results_list.append({"label": plot_info['label'],
                                  "results": auc_results})
     
     run_names = set([plot_info['run_name'] for plot_info in plot_info_list])
-    if len(run_names) == 1:
+    if len(run_names) == 0: #1:
         title = f"{assay_source}/{run_names.pop()}"
     else:
         title = f"{assay_source}"
@@ -440,12 +505,16 @@ def show_last_round_auc_by_domain(
         all_data_dfs = []
         for auc_results in auc_results_list:
             data_df = pd.DataFrame()
-            data_df["domain"] = auc_results["results"]["domain"].apply(lambda d: d["name"]) 
-            data_df["domain_start"] = auc_results["results"]["domain"].apply(lambda d: d["start"])
-            data_df["domain_end"] = auc_results["results"]["domain"].apply(lambda d: d["end"])
+            data_df["domain"] = auc_results["results"]["domain"]
+            data_df["domain_start"] = auc_results["results"]["domain_start"]
+            data_df["domain_end"] = auc_results["results"]["domain_end"]
             data_df["optimal_youden_index"] = auc_results["results"]["optimal_youden_index"]
             data_df["assay_source"] = assay_source
             data_df["metric"] = auc_results["results"]["metric"]
+            data_df["metric_std"] = auc_results["results"]["metric_std"]
+            data_df["optimal_youden_index_std"] = auc_results["results"]["optimal_youden_index_std"]
+            data_df["num_positive"] = auc_results["results"]["num_positive"]
+            data_df["num_negative"] = auc_results["results"]["num_negative"]
             data_df["model"] = auc_results["label"]
             all_data_dfs.append(data_df)
         return len(results), pd.concat(all_data_dfs, ignore_index=True)
@@ -516,9 +585,9 @@ def show_roc_auc_by_round(
         num_positive = results_sim1_round1[class_label_column].sum()
         num_negative = len(results_sim1_round1) - num_positive
 
-        """
-        for (round_num, simulation_id), group_results in results.groupby(
-                ['round_num', 'simulation_id'], sort=True):
+        auc_rows = []
+        for (round_num, simulation_num), group_results in results.groupby(
+                ['round_num', 'simulation_num'], sort=True):
             optimal_youden_index, fpr, tpr, _ = calculate_optimal_youden_index(
                     group_results[class_label_column].values,
                     group_results['prediction_score'].values)
@@ -526,12 +595,19 @@ def show_roc_auc_by_round(
                                 group_results['prediction_score'].values)
             auc_rows.append(
                 {"round_num": round_num,
-                "simulation_id": simulation_id,
+                "simulation_num": simulation_num,
                 "auc": auc,
                 "optimal_youden_index": optimal_youden_index,
             })
-        """
 
+        auc_results = pd.DataFrame(auc_rows)
+        auc_results = auc_results.groupby("round_num").agg(
+            auc=("auc", "mean"),
+            auc_std=("auc", "std"),
+            optimal_youden_index=("optimal_youden_index", "mean"),
+            optimal_youden_index_std=("optimal_youden_index", "std")
+        ).reset_index()
+        """
         round_results = results.groupby(["variant_id", "round_num"]).agg(
             mean_prediction=("prediction_score", "mean"),
             label=(class_label_column, "max")
@@ -548,15 +624,16 @@ def show_roc_auc_by_round(
                 "auc": auc,
                 "optimal_youden_index": optimal_youden_index,
                 })
-
         auc_results = pd.DataFrame(auc_rows)
+        """
+
         auc_results_list.append({"label": plot_info['label'],
                                  "auc_results": auc_results,
                                  "llr_auc": llr_auc,
                                  "num_positive": num_positive,
                                  "num_negative": num_negative})
     plotter.plot_roc_auc_by_round_multi(axes, auc_results_list,
-                                 title=f"{assay_source}/{run_name}")
+                                 title=f"{assay_source}") #/{run_name}")
     if return_data:
         all_data_dfs = []
         for auc_results in auc_results_list:
@@ -579,7 +656,8 @@ def show_roc_prediction_assay_curve(
         class_label_column, title,
         compute_class_label_func=None,
         return_data=False) -> int:
-    results = repo.get_last_round_scores_by_config_dataset_run(
+    results = get_last_round_scores_by_config_dataset_run(
+        repo,
         config_id=config_id,
         dataset_name=assay_source,
         run_name=run_name)
@@ -703,7 +781,7 @@ def create_grid_row(grid, fig, row_ind, col_ind):
     # Create an inner grid with 3 rows (vertical subplots) inside each outer cell
     inner_grid = gridspec.GridSpecFromSubplotSpec(
         3, 1, subplot_spec=grid[row_ind, col_ind], hspace=0.2,
-        height_ratios=[1, 4, 4],
+        height_ratios=[1, 4, 1],
     )
     
     # Top subplot
@@ -733,7 +811,7 @@ def show_protein_landscape_plots(show_plot_func, dataset_plot_info,
     config_ids = ["c10", "c3_1", "c3_2"]
     run_names = ["ESM2_LLR", "RF_AL", "RFTRAIN_ALL"]
     run_names = ["ESM2_LLR_ALL_PRED", "RF_AL_ALL_PRED", "RFTRAIN_ALL_ALL_PRED"]
-    titles = ["LogLikelihood", "RandomForest AL", "RandomForest Train20%"]
+    titles = ["LogLikelihood", "RandomForest AL", "RandomForest MonteCarlo"]
     standardize_scores = [True, False, False]
     num_models = len(config_ids)
 
@@ -761,8 +839,8 @@ def show_protein_landscape_plots(show_plot_func, dataset_plot_info,
             run_name = run_names[model_ind]
             title = titles[model_ind]
             standardize_scores_flag = standardize_scores[model_ind]
-            results = repo.get_last_round_scores_by_config_dataset_run(
-                config_id=config_id, dataset_name=dataset, run_name=run_name)
+            results = get_last_round_scores_by_config_dataset_run(
+                repo, config_id=config_id, dataset_name=dataset, run_name=run_name)
             if len(results) == 0:
                 # increment_row_id = False
                 break
@@ -953,7 +1031,7 @@ def show_auc_by_round_plots(show_plot_func, dataset_plot_info,
     standardize_scores = [False]
     num_models = len(config_ids)
 
-    num_cols = 3
+    num_cols = 2
     num_rows_per_dataset = num_models// num_cols + int(num_models % num_cols > 0)
     num_rows = len(dataset_plot_info) * num_rows_per_dataset
 

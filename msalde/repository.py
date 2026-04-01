@@ -1,5 +1,6 @@
+from asyncio import run
 from datetime import datetime
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from .dbutil import DbExtensionCreator, DbViewCreator
@@ -68,6 +69,7 @@ class ALDERepository:
         max_assay_score: float,
         wt_assay_score: float,
         save_all_predictions: bool,
+        n_fold_cv: bool = False,
         start_ts: datetime = datetime.now(),
     ) -> ALDERun:
         session = sessionmaker(bind=self._engine)
@@ -100,6 +102,7 @@ class ALDERepository:
                 max_assay_score=max_assay_score,
                 wt_assay_score=wt_assay_score,
                 save_all_predictions=save_all_predictions,
+                n_fold_cv=n_fold_cv,
                 start_ts=start_ts,
             )
             session.add(run)
@@ -296,6 +299,73 @@ class ALDERepository:
             session.commit()
             session.refresh(round_variant)
             return round_variant
+
+    def set_round_top_variant_valid_prediction_score(
+        self,
+        simulation_id: int,
+    ):
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            sql = text("""
+                insert into alde_round_top_variant(id, variant_id,
+                       valid_prediction_score, valid_round_id)
+                select tv.id, tv.variant_id, tv.prediction_score, rnd.id
+                from alde_round rnd, alde_round_top_variant tv
+                where rnd.simulation_id = :simulation_id
+                    and rnd.id = tv.round_id
+                    and tv.variant_id not in
+                        (select av.variant_id
+                        from alde_round rndi, alde_round_acquired_variant av
+                        where rndi.id = av.round_id
+                        and rndi.simulation_id = rnd.simulation_id
+                        and rndi.round_num < rnd.round_num)
+                on conflict(id)
+                do update set valid_prediction_score = excluded.valid_prediction_score,
+                             valid_round_id = excluded.valid_round_id;
+                """)
+            session.execute(
+                sql,
+                {"simulation_id": simulation_id})
+            sql = text("""
+                insert into alde_round_top_variant(id, variant_id,
+                       valid_prediction_score, valid_round_id)
+                select tv.id, tv.variant_id,
+                    (select tvi.valid_prediction_score
+                    from alde_round rndi, alde_round_top_variant tvi
+                    where rnd.simulation_id = rndi.simulation_id
+                        and rndi.id = tvi.round_id
+                        and tvi.variant_id = tv.variant_id
+                        and rndi.round_num < rnd.round_num
+                        and tvi.valid_prediction_score is not null
+                    order by rndi.round_num desc
+                    limit 1) valid_prediction_score,
+                    (select rndi.id
+                    from alde_round rndi, alde_round_top_variant tvi
+                    where rnd.simulation_id = rndi.simulation_id
+                        and rndi.id = tvi.round_id
+                        and tvi.variant_id = tv.variant_id
+                        and rndi.round_num < rnd.round_num
+                        and tvi.valid_prediction_score is not null
+                    order by rndi.round_num desc
+                    limit 1) valid_round_id
+                from alde_round rnd, alde_round_top_variant tv
+                where rnd.simulation_id = :simulation_id
+                    and rnd.id = tv.round_id
+                    and tv.valid_prediction_score is null
+                    and tv.variant_id not in
+                        (select av1.variant_id
+                        from alde_round rnd1, alde_round_acquired_variant av1
+                        where rnd1.id = av1.round_id
+                        and rnd1.simulation_id = rnd.simulation_id
+                        and rnd1.round_num = 1)
+                on conflict(id)
+                do update set valid_prediction_score = excluded.valid_prediction_score,
+                             valid_round_id = excluded.valid_round_id;
+                """)
+            session.execute(
+                sql,
+                {"simulation_id": simulation_id})
+            session.commit()
 
     def add_last_round_score(
         self,

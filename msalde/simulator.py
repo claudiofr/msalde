@@ -19,8 +19,8 @@ from .repository import ALDERepository
 
 from .data_loader import VariantDataLoader
 from .model import (
-    AcquisitionScore, AssayResult, PerformanceMetrics, SelectedVariant,
-    SubRunParameters, Variant,
+    AcquisitionScore, AssayResult, NFoldCVParams, PerformanceMetrics, SelectedVariant,
+    SubRunContext, SubRunParameters, Variant,
     ModelPrediction
 )
 from .data_loader import VariantDataLoaderFactory
@@ -135,6 +135,7 @@ class DESimulator:
         max_assay_score: float = None,
         wt_assay_score: float = None,
         save_all_predictions: bool = None,
+        n_fold_cv: bool = False,
     ) -> ALDERun:
         """
         Creates a new run record in the repository and returns its run_id.
@@ -160,13 +161,14 @@ class DESimulator:
             num_top_prediction_score_variants_per_round=
             num_top_prediction_score_variants_per_round,
             num_top_predictions_for_top_n_metrics=
-            num_top_predictions_for_top_n_metrics,           
+            num_top_predictions_for_top_n_metrics,
             batch_size=batch_size,
             test_fraction=test_fraction,
             random_seed=random_seed,
             max_assay_score=max_assay_score,
             wt_assay_score=wt_assay_score,
             save_all_predictions=save_all_predictions,
+            n_fold_cv=n_fold_cv,
             start_ts=datetime.now(),
         )
         return run
@@ -606,6 +608,7 @@ class DESimulator:
         dataset_name: str = None,
         save_all_predictions: bool = False,
         save_last_round_predictions: bool = False,
+        n_fold_cv: bool = False,
     ):
         if dataset_name is None:
             dataset_name = self._run_config[config_id].default_dataset
@@ -639,6 +642,7 @@ class DESimulator:
             test_fraction=test_fraction,
             random_seed=random_seed,
             save_all_predictions=save_all_predictions,
+            n_fold_cv=n_fold_cv,
             # max_assay_score=max_assay_score,
             # wt_assay_score=wt_assay_score,
         )
@@ -674,11 +678,23 @@ class DESimulator:
 
         for sub_run_params in sub_runs:
             sub_run = self._create_sub_run(run.id, sub_run_params)
-            for sumulation_num in range(1, num_simulations + 1):
+            sub_run_context = None
+            if n_fold_cv:
+                if num_rounds != 2:
+                    raise ValueError("n_fold_cv requires exactly 2 rounds")
+                sub_run_context = self._create_sub_run_context(
+                    simulation_variants,
+                    num_simulations)
+                num_top_prediction_score_variants_per_round = 0
+            for simulation_num in range(1, num_simulations + 1):
+                if n_fold_cv:
+                    num_selected_variants_first_round = \
+                        sub_run_context.n_fold_cv.num_train_variants(
+                            simulation_num - 1)
                 self._run_simulation(
                     sub_run.id,
                     sub_run_params,
-                    sumulation_num,
+                    simulation_num,
                     simulation_variants,
                     simulation_assay_results,
                     test_variants,
@@ -691,7 +707,9 @@ class DESimulator:
                     embedder,
                     wt_sequence,
                     save_all_predictions,
-                    save_last_round_predictions
+                    save_last_round_predictions,
+                    sub_run_context,
+                    n_fold_cv
                 )
 
             self._end_sub_run(sub_run.id)
@@ -715,6 +733,8 @@ class DESimulator:
         wt_sequence: str,
         save_all_predictions: bool = False,
         save_last_round_predictions: bool = False,
+        sub_run_context: SubRunContext = None,
+        n_fold_cv: bool = False
     ):
         """
         Runs a single simulation with the given parameters.
@@ -741,7 +761,8 @@ class DESimulator:
             learner, first_round_acquisition_strategy, acquisition_strategy = \
                 self._init_learners_and_strategies(
                     sub_run_params, simulation_num,
-                    round_num, embedder, wt_sequence)
+                    round_num, embedder, wt_sequence,
+                    sub_run_context, n_fold_cv)
             if round_num == 1:
                 train_predictions = None
                 remaining_predictions = [ModelPrediction(
@@ -844,6 +865,16 @@ class DESimulator:
                             best_variant)
         self._end_simulation(simulation.id)
 
+    def _create_sub_run_context(
+        self,
+        simulation_variants: list[Variant],
+        num_folds: int,
+    ) -> SubRunContext:
+        variant_ids = [v.id for v in simulation_variants]
+        np.random.shuffle(variant_ids)
+        folds = [fold.tolist() for fold in np.array_split(variant_ids, num_folds)]
+        return SubRunContext(n_fold_cv=NFoldCVParams(fold_variant_ids=folds))
+
     def _compile_sub_runs(self, config_id: str) -> list[SubRunParameters]:
 
         simulation_config_id = self._run_config[config_id].simulation_config_id
@@ -869,6 +900,8 @@ class DESimulator:
                     dict(simulation.first_round_acquisition_strategy.parameters),
                     first_round_acquisition_strategy_uses_random_seed=
                     simulation.first_round_acquisition_strategy.uses_random_seed,
+                    first_round_acquisition_strategy_uses_sub_run_context=
+                    simulation.first_round_acquisition_strategy.uses_sub_run_context,
                     acquisition_strategy_type=acquisition_strategy_config.type,
                     acquisition_strategy_name=acquisition_strategy_config.name,
                     acquisition_strategy_parameters=
@@ -885,7 +918,9 @@ class DESimulator:
                                       simulation_num: int,
                                       round_num: int,
                                       embedder: ProteinEmbedder,
-                                      wt_sequence: str):
+                                      wt_sequence: str,
+                                      sub_run_context: SubRunContext,
+                                      n_fold_cv: bool):
         """
         Initialize learners and acquisition strategies with proper random seeds.
         
@@ -893,6 +928,15 @@ class DESimulator:
             sub_run_params: SubRunParameters object containing configuration
             random_seed: Random seed for reproducibility
         """
+        if n_fold_cv:
+            sub_run_params.first_round_acquisition_strategy_type = "NFoldCV"
+            sub_run_params.first_round_acquisition_strategy_parameters = {}
+            sub_run_params.first_round_acquisition_strategy_uses_random_seed = True
+            sub_run_params.first_round_acquisition_strategy_uses_sub_run_context = True
+            sub_run_params.acquisition_strategy_type = "Random"
+            sub_run_params.acquisition_strategy_parameters = {}
+            sub_run_params.acquisition_strategy_uses_random_seed = False
+
         # Initialize learner
         learner_factory = self._learner_factories.get(
             sub_run_params.learner_type)
@@ -922,6 +966,9 @@ class DESimulator:
             if sub_run_params.first_round_acquisition_strategy_uses_random_seed:
                 first_round_params['random_state1'] = simulation_num
                 first_round_params['random_state2'] = round_num
+
+            if sub_run_params.first_round_acquisition_strategy_uses_sub_run_context:
+                first_round_params['sub_run_context'] = sub_run_context
 
             first_round_acquisition_strategy = \
                 first_round_factory.create_instance(
@@ -959,6 +1006,7 @@ class DESimulator:
         """
         Creates a new simulation record in the repository and returns it.
         """
+        self._repository.set_round_top_variant_valid_prediction_score(simulation_id)
         self._repository.end_simulation(
             id=simulation_id,
             end_ts=datetime.now(),

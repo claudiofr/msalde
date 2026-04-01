@@ -19,7 +19,8 @@ from .acquisition_strategy import (
     UCBStrategyFactory,
     ThompsonSamplingStrategyFactory,
     ExpectedImprovementStrategyFactory,
-    VarianceStrategyFactory
+    VarianceStrategyFactory,
+    NFoldCVStrategyFactory
 )
 from .esm_embedder import ESMEmbedderFactory
 from .file_load_embedder import FileLoadEmbedderFactory
@@ -77,6 +78,7 @@ class ALDEContainer:
             "ThompsonSampling": ThompsonSamplingStrategyFactory(),
             "ExpectedImprovement": ExpectedImprovementStrategyFactory(),
             "Variance": VarianceStrategyFactory(),
+            "NFoldCV": NFoldCVStrategyFactory()
         }
     _data_loader_factories = {
         "file_loader": VariantDataFileLoaderFactory(),

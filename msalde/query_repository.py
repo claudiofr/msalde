@@ -56,7 +56,7 @@ class ALDEQueryRepository:
                 with
                     predictions as (
                     select variant_id, assay_score,
-                                avg(prediction_score) prediction_score, num_variants
+                                avg(valid_prediction_score) prediction_score, num_variants
                     from alde_simulation s,
                         alde_round rnd,
                         alde_round_top_variant lrs,
@@ -68,6 +68,7 @@ class ALDEQueryRepository:
                         and sr.run_id = r.id
                         and rnd.round_num = r.num_rounds
                         and r.id = :run_id
+                        and lrs.valid_prediction_score is not null
                     group by variant_id, lrs.assay_score, num_variants
                     ),
                     mean_std as (
@@ -106,6 +107,58 @@ class ALDEQueryRepository:
                     round((prediction_score - avg_prediction_score)/
                         std_prediction_score, 3) z_score
                 from predictions p, mean_std ms
+                order by prediction_score desc
+                """)
+
+            # Execute the query with a parameter
+            result = session.execute(
+                sql,
+                {"run_id": run.id})
+            df = pd.DataFrame(result.fetchall(), columns=result.keys())
+            # Process the results
+            return df
+
+    def get_last_round_scores_by_simulation_by_config_dataset_run(
+        self, config_id: int, dataset_name: str, run_name: str
+        ) -> pd.DataFrame:
+
+        run = self.get_run_by_config_dataset_run(
+            config_id, dataset_name, run_name)
+        if not run:
+            return pd.DataFrame()
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            if run.save_all_predictions:
+                sql = text("""
+                select variant_id, assay_score, simulation_num,
+                                valid_prediction_score prediction_score,
+                                num_variants
+                from alde_simulation s,
+                    alde_round rnd,
+                    alde_round_top_variant lrs,
+                    alde_sub_run sr,
+                    alde_run r
+                where s.id = rnd.simulation_id
+                    and rnd.id = lrs.round_id
+                    and s.sub_run_id = sr.id
+                    and sr.run_id = r.id
+                    and rnd.round_num = r.num_rounds
+                    and r.id = :run_id
+                    and lrs.valid_prediction_score is not null
+                order by valid_prediction_score desc
+                """)
+            else:
+                sql = text("""
+                select variant_id, assay_score, simulation_num,
+                            prediction_score, num_variants
+                from alde_simulation s,
+                    alde_last_round_score lrs,
+                    alde_sub_run sr,
+                    alde_run r
+                where s.id = lrs.simulation_id
+                    and s.sub_run_id = sr.id
+                    and sr.run_id = r.id
+                    and r.id = :run_id
                 order by prediction_score desc
                 """)
 
@@ -241,7 +294,7 @@ class ALDEQueryRepository:
         with session() as session:
             sql = text("""
                 select variant_id, sr.strategy_name, round_num, simulation_id,
-                       simulation_num, prediction_score, assay_score,
+                       simulation_num, valid_prediction_score prediction_score, assay_score,
                        num_variants
                 from alde_round_top_variant rv, alde_round rnd,
                   alde_simulation s, alde_sub_run sr,
@@ -250,6 +303,7 @@ class ALDEQueryRepository:
                   and rnd.simulation_id = s.id
                   and s.sub_run_id = sr.id
                   and sr.run_id = r.id
+                  and rv.valid_prediction_score is not null
                   and (:strategy_name is null
                      or strategy_name = :strategy_name)
                   and r.id =
@@ -272,3 +326,43 @@ class ALDEQueryRepository:
             # Process the results
             return df
 
+    def get_n_fold_cv_scores_by_config_dataset_run(
+        self, config_id: int, dataset_name: str, run_name: str
+        ) -> pd.DataFrame:
+
+        run = self.get_run_by_config_dataset_run(
+            config_id, dataset_name, run_name)
+        if not run:
+            return pd.DataFrame()
+        session = sessionmaker(bind=self._engine)
+        with session() as session:
+            if run.save_all_predictions:
+                sql = text("""
+                select s.simulation_num, variant_id, assay_score,
+                            prediction_score, num_variants
+                from alde_simulation s,
+                    alde_round rnd,
+                    alde_round_top_variant lrs,
+                    alde_sub_run sr,
+                    alde_run r
+                where s.id = rnd.simulation_id
+                    and rnd.id = lrs.round_id
+                    and s.sub_run_id = sr.id
+                    and sr.run_id = r.id
+                    and rnd.round_num = r.num_rounds
+                    and r.id = :run_id
+                    and lrs.valid_prediction_score is not null
+                    and rnd.round_num = 2
+                order by prediction_score desc
+                """)
+            else:
+                raise NotImplementedError(
+                    "N-fold CV scores retrieval not implemented for runs without save_all_predictions enabled.")
+
+            # Execute the query with a parameter
+            result = session.execute(
+                sql,
+                {"run_id": run.id})
+            df = pd.DataFrame(result.fetchall(), columns=result.keys())
+            # Process the results
+            return df

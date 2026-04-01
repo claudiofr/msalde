@@ -12,8 +12,8 @@ SELECT SIMULATION_ID,ROUND_NUM,COUNT(*) FROM (
                   and r.id =
                     (select max(id)
                     from alde_run r
-                    where r.config_id = 'c10'
-                        and r.dataset_name = 'ACVRL1'
+                    where r.config_id = 'c3_1' --'c10'
+                        -- and r.dataset_name = 'SRC' --'ACVRL1'
                         -- and r.name = 'RF_AL_ALL_PRED'
                         and r.end_ts is not null))
 GROUP BY SIMULATION_ID,ROUND_NUM

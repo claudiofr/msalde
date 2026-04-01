@@ -185,7 +185,7 @@ class ESMEmbedder(ProteinEmbedder):
             covariance_type="diag",
             max_iter=500,
             random_state=random_state,
-            verbose=1,
+            # verbose=1,
         )
         gmm.fit(all_residues)
         print(f"GMM fitted. Final lower bound: {gmm.lower_bound_:.4f}")

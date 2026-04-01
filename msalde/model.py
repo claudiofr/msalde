@@ -16,6 +16,7 @@ class SubRunParameters:
     first_round_acquisition_strategy_name: str
     first_round_acquisition_strategy_parameters: str
     first_round_acquisition_strategy_uses_random_seed: bool
+    first_round_acquisition_strategy_uses_sub_run_context: bool
     acquisition_strategy_type: str
     acquisition_strategy_name: str
     acquisition_strategy_parameters: str
@@ -99,3 +100,21 @@ class PerformanceMetrics:
     test_spearman: float
     spearman: float
     top_n_mean: Optional[float] = None
+
+
+@dataclass
+class NFoldCVParams:
+    """List of list of variant ids for each fold"""
+
+    fold_variant_ids: list[list[Union[int, str]]]
+
+    def num_train_variants(self, fold_num: int) -> int:
+        return sum(len(fold_variant_ids) for i, fold_variant_ids in enumerate(self.fold_variant_ids)
+                   if i != fold_num)
+
+
+@dataclass
+class SubRunContext:
+    """Right now only relevant for n_fold_cv"""
+
+    n_fold_cv: NFoldCVParams

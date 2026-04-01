@@ -107,7 +107,8 @@ def run_simulation_mc(simulator, configid, run_name, dataset,
                       num_rounds, num_simulations,
                       num_selected_variants_first_round,
                       num_top_acquisition_score_variants_per_round,
-                      save_all_predictions=False):
+                      save_all_predictions=False,
+                      n_fold_cv=False):
     simulator.run_simulations(
         config_id=configid,
         name=run_name,
@@ -125,17 +126,20 @@ def run_simulation_mc(simulator, configid, run_name, dataset,
         random_seed=42,
         dataset_name=dataset,
         save_last_round_predictions=True,
-        save_all_predictions=save_all_predictions)
+        save_all_predictions=save_all_predictions,
+        n_fold_cv=n_fold_cv)
 
 def run_save_all_predictions(simulator, configid, run_name, dataset,
                       num_rounds, num_simulations,
                       num_selected_variants_first_round,
-                      num_top_acquisition_score_variants_per_round):
-    run_simulation_mc(simulator, configid, run_name+"_ALL_PRED", dataset,
+                      num_top_acquisition_score_variants_per_round,
+                      n_fold_cv=False):
+    run_simulation_mc(simulator, configid, run_name, dataset,
                       num_rounds, num_simulations,
                       num_selected_variants_first_round,
                       num_top_acquisition_score_variants_per_round,
-                      save_all_predictions=True)
+                      save_all_predictions=True,
+                      n_fold_cv=n_fold_cv)
 
 def run_maves(label_dir, datasets, config_file,
               num_top_acquire_variants_per_round=None):
@@ -149,14 +153,35 @@ def run_maves(label_dir, datasets, config_file,
         if num_top_acquire_variants_per_round is None:
             df = pd.read_csv(f"{label_dir}/{dataset}_labels.csv")
             if df.shape[0] < 500:
-                num_top_acquire_variants_per_round = int(0.1 * df.shape[0])
+                num_top_acquire_variants_per_round = int(0.05 * df.shape[0])
             else:
-                num_top_acquire_variants_per_round = 100
+                num_top_acquire_variants_per_round = 50
             print(f"Running {dataset} with {df.shape[0]} variants")
 
         run_sim_func = run_simulation_mc
         run_sim_func = run_save_all_predictions
 
+        run_sim_func(simulator, "c3_1", "RF_AL_VAL", dataset,
+                          num_rounds=11,
+                          num_simulations=5,
+                          num_selected_variants_first_round=16,
+                          num_top_acquisition_score_variants_per_round=
+                          num_top_acquire_variants_per_round)
+        run_sim_func(simulator, "c3_2", "RF_5_FOLD_CV", dataset,
+                          num_rounds=2,
+                          num_simulations=5,
+                          num_selected_variants_first_round=16,
+                          num_top_acquisition_score_variants_per_round=
+                          num_top_acquire_variants_per_round,
+                          n_fold_cv=True)
+        continue
+        run_sim_func(simulator, "c3_1", "RF_AL_FV64_64", dataset,
+                          num_rounds=5,
+                          num_simulations=5,
+                          num_selected_variants_first_round=16,
+                          num_top_acquisition_score_variants_per_round=
+                          num_top_acquire_variants_per_round)
+        continue
         run_sim_func(simulator, "c3_1", "RF_AL_WINP8_5", dataset,
                           num_rounds=5,
                           num_simulations=5,

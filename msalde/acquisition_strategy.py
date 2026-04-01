@@ -1,5 +1,5 @@
 from .learner import Learner
-from .model import AcquisitionScore, ModelPrediction
+from .model import AcquisitionScore, ModelPrediction, SubRunContext
 from .strategy import AcquisitionStrategy, AcquisitionStrategyFactory
 from .al_util import cantor_pair
 import numpy as np
@@ -225,5 +225,86 @@ class ThompsonSamplingStrategyFactory(AcquisitionStrategyFactory):
         return ThompsonSamplingStrategy(**kwargs)
 
 
+class ThompsonSamplingStrategy(AcquisitionStrategy):
+    """
+    A strategy that selects random samples from the dataset.
+    """
+    def __init__(self, random_state1: Optional[int] = None,
+                 random_state2: Optional[int] = None):
+        """
+        Initialize the random strategy.
+
+        Args:
+            random_state: Random seed for reproducibility
+        """
+        self._random_state = cantor_pair(random_state1, random_state2)
+
+    def compute_scores(self,
+                       fitted_learner: Learner,
+                       variant_predictions: list[ModelPrediction]) -> \
+            list[AcquisitionScore]:
+        """
+        Randomly pick one of the component models and use their predictions as
+        the acquisition scores.
+        These component models would typically be the estimators in an
+        ensemble model.
+        We ignore the predictions from the main ensemble model.
+        """
+        num_components = len(
+            variant_predictions[0].component_predictions)
+        if self._random_state is not None:
+            np.random.seed(self._random_state)
+        random_component_idx = np.random.randint(num_components)
+        return [AcquisitionScore(
+            variant_id=pred.variant_id,
+            score=pred.component_predictions[random_component_idx].score)
+                for pred in variant_predictions]
+
+class NFoldCVStrategy(AcquisitionStrategy):
+    """
+    A strategy that selects random samples from the dataset.
+    """
+    def __init__(self, sub_run_context: SubRunContext,
+                 random_state1: Optional[int] = None,
+                 random_state2: Optional[int] = None):
+        """
+        Initialize the random strategy.
+
+        Args:
+            random_state: Random seed for reproducibility
+        """
+        self._fold_num = random_state1 - 1
+        self._folds = sub_run_context.n_fold_cv.fold_variant_ids
+        self._num_folds = len(self._folds)
+        self._num_variants_in_fold = len(self._folds[self._fold_num])
+
+    def compute_scores(self,
+                       fitted_learner: Learner,
+                       variant_predictions: list[ModelPrediction]) -> \
+            list[AcquisitionScore]:
+        """
+        Selects random samples from the dataset.
+
+        Returns:
+            A list of randomly selected samples.
+        """
+        train_folds = [self._folds[fold_num]
+                       for fold_num in range(self._num_folds)
+                       if fold_num != self._fold_num]
+        train_variant_ids = [variant_id for fold in train_folds
+                             for variant_id in fold]
+
+        scores = [AcquisitionScore(variant_id=variant_id, score=1)
+                  for variant_id in train_variant_ids]
+        validation_scores = [AcquisitionScore(variant_id=variant_id, score=0)
+                  for variant_id in self._folds[self._fold_num]]
+        scores.extend(validation_scores)
+        return scores
+        
+
+class NFoldCVStrategyFactory(AcquisitionStrategyFactory):
+
+    def create_instance(self, **kwargs) -> AcquisitionStrategy:
+        return NFoldCVStrategy(**kwargs)
 
 

@@ -38,6 +38,7 @@ class ALDERun(Base):
     binary_score_cutoff = Column(Float)
     wt_assay_score = Column(Float)
     save_all_predictions = Column(Boolean, default=False)
+    n_fold_cv = Column(Boolean, default=False)
     start_ts = Column(DateTime)
     end_ts = Column(DateTime)
 
@@ -102,7 +103,11 @@ class ALDERound(Base):
     round_variants = relationship("ALDERoundAcquiredVariant",
                                   back_populates="round")
     round_top_variants = relationship("ALDERoundTopVariant",
+                                      foreign_keys="ALDERoundTopVariant.round_id",
                                       back_populates="round")
+    round_top_valid_variants = relationship("ALDERoundTopVariant",
+                                      foreign_keys="ALDERoundTopVariant.valid_round_id",
+                                      back_populates="valid_round")
 
 
 class ALDERoundAcquiredVariant(Base):
@@ -133,13 +138,18 @@ class ALDERoundTopVariant(Base):
     variant_name = Column(String(100))
     assay_score = Column(Float)
     prediction_score = Column(Float)
+    valid_prediction_score = Column(Float)
+    valid_round_id = Column(Integer, ForeignKey('alde_round.id'))
     insert_ts = Column(DateTime)
 
     __table_args__ = (
         UniqueConstraint('round_id', 'variant_id', name='uix_round_top_variant'),
     )
 
-    round = relationship("ALDERound", back_populates="round_top_variants")
+    round = relationship("ALDERound",  foreign_keys=[round_id],
+                         back_populates="round_top_variants")
+    valid_round = relationship("ALDERound", foreign_keys=[valid_round_id],
+                               back_populates="round_top_valid_variants")
 
 
 class ALDELastRoundScore(Base):

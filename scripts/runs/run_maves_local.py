@@ -72,13 +72,15 @@ datasets = [
     "ACVR1",
 ]
 
-datasets = ["ACVRL1"]
+# datasets = ["ACVRL1"]
 
+datasets_ = datasets[:1]
+datasets_ = ["cas12f2"]
 # minerva change
 #label_dir = "/sc/arion/work/fratac01/data/al/dms"
 label_dir = "/home/claudiof/data/al/dms"
 label_dir = None
 
 if __name__ == "__main__":
-    run_maves(label_dir, datasets, "./config/msalde.yaml", 5)
+    run_maves(label_dir, datasets_, "./config/msalde.yaml", 5)
 

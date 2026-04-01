@@ -50,7 +50,8 @@ def run_simulation_mc(simulator, configid, dataset,
                       num_selected_variants_first_round,
                       num_top_acquisition_score_variants_per_round,
                       run_name="test_run",
-                      save_all_predictions=False):
+                      save_all_predictions=False,
+                      n_fold_cv=False):
     simulator.run_simulations(
         config_id=configid,
         name=run_name,
@@ -68,7 +69,8 @@ def run_simulation_mc(simulator, configid, dataset,
         random_seed=42,
         dataset_name=dataset,
         save_last_round_predictions=True,
-        save_all_predictions=save_all_predictions)
+        save_all_predictions=save_all_predictions,
+        n_fold_cv=n_fold_cv)
 
 
 def test_run_simulations_llr(
@@ -120,3 +122,16 @@ def test_run_simulations_multi_strategies(
                     num_top_acquisition_score_variants_per_round=5,
                     run_name="RF_AL_MS")
     pass
+
+def test_run_simulations_n_fold_cv(
+        de_simulator: DESimulator):
+    run_simulation_mc(de_simulator, "c3_1", "cas12f2",
+                      run_name="N_FOLD_CV_TEST",
+                      num_rounds=2,
+                      num_simulations=5,
+                      num_selected_variants_first_round=15000,
+                      num_top_acquisition_score_variants_per_round=5,
+                      n_fold_cv=True,
+                      save_all_predictions=True)
+    pass
+

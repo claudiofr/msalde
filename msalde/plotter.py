@@ -84,7 +84,7 @@ class ALDEPlotter:
         axes_top.set_ylim(0, 1)
         axes_top.set_yticks([])
         # axes_top.set_xlabel("Residue number")
-        axes_top.set_title(title)
+        axes_top.set_title(title, fontsize=16)
 
         # Create legend for secondary structure colors
         legend_patches = [
@@ -92,11 +92,12 @@ class ALDEPlotter:
             mpatches.Patch(color=color_map["E"], label="Strand"),
             mpatches.Patch(color=color_map["C"], label="Coil"),
         ]
-        axes_top.legend(handles=legend_patches, loc="upper right", bbox_to_anchor=(1.1, 1.0)) #, title="Secondary Structure")
+        axes_top.legend(handles=legend_patches, loc="upper right",
+                        bbox_to_anchor=(1.1, 1.0), fontsize=14) #, title="Secondary Structure")
 
         colors = [(0.118, 0.565, 1.000, 0.7), (0.235, 0.702, 0.443, 0.7), 'orange', 'purple', 'cyan', 'magenta']
         axes_middle.plot(position, assay_scores, linestyle='-', color=colors[0], label='Assay Score')
-        axes_middle.set_ylabel('Mean Score')
+        axes_middle.set_ylabel('Mean Score', fontsize=12)
         axes_middle.plot(position, prediction_scores, linestyle='--', color=colors[1],
                       label=prediction_label)
         axes_middle.fill_between(position, assay_scores, prediction_scores,
@@ -107,11 +108,12 @@ class ALDEPlotter:
                             linestyle='dashed', linewidth=1.5)
         axes_middle.axhline(y=lof_assay_threshold, color='lightgray',
                             linestyle='dashed', linewidth=1.5)
-        axes_middle.legend(loc='lower right', bbox_to_anchor=(1.1, 0.8))
+        axes_middle.legend(loc='lower right', bbox_to_anchor=(1.1, 0.8),
+                           fontsize=14)
         axes_bottom.plot(position, counts, linestyle='-', color=colors[2],
                          label=count_label)
-        axes_bottom.set_ylabel(count_label)
-        axes_bottom.set_xlabel('Residue Position')
+        axes_bottom.set_ylabel(count_label, fontsize=12)
+        axes_bottom.set_xlabel('Residue Position', fontsize=12)
         axes_middle.patch.set_facecolor('white')
         axes_bottom.patch.set_facecolor('white')
         for spine in chain(axes_middle.spines.values(), axes_bottom.spines.values()):
@@ -243,10 +245,11 @@ class ALDEPlotter:
             rounds = aucs["round_num"].astype(int)
             max_rounds = rounds.max()
             axes.set_xlim(right=max_rounds+1)
-            axes.plot(rounds, aucs["auc"],
-                      marker='o', linestyle='-',
-                      label=f'{label} (+{num_positive}/-{num_negative})',
-                      color=colors[i]
+            axes.errorbar(rounds, aucs["auc"],
+                          yerr=aucs["auc_std"],
+                          marker='o', linestyle='-',
+                          label=f'{label} (+{num_positive}/-{num_negative})',
+                          color=colors[i]
             )
             # Add horizontal dashed line for LLR
 
@@ -312,7 +315,7 @@ class ALDEPlotter:
             #num_positive = results["num_positive"]
             #num_negative = results["num_negative"]
             if not xtick_label_info_list:
-                domain_names = results["domain"].apply(lambda d: d["name"])
+                domain_names = results["domain"]
                 xtick_label_info_list = [(domain_name, []) for domain_name in domain_names]
             # Update the counts for each domain
             for domain_ind, result in results.iterrows():
@@ -320,8 +323,9 @@ class ALDEPlotter:
                     display_domain_counts = False
                     break
                 xtick_label_info_list[domain_ind][1].append((result["num_positive"], result["num_negative"]))
-            axes.plot(domain_names,
+            axes.errorbar(domain_names,
                       results["metric"],
+                      yerr=results["metric_std"],
                       marker='o', linestyle='-',
                       label=f'{label}',
                       color=colors[i]
@@ -345,8 +349,9 @@ class ALDEPlotter:
                 text = f"+{variant_counts[0]}/-{variant_counts[1]}"
                 axes.text(xpos, -0.2 - 0.08*i, text, ha="center", va="top", color=color, transform=axes.get_xaxis_transform() )
 
-        axes.legend(fontsize=11, loc='upper left', framealpha=0.0,
-                    bbox_to_anchor=(1.02, 1))
+        if len(results_list) > 1:
+            axes.legend(fontsize=11, loc='upper left', framealpha=0.0,
+                        bbox_to_anchor=(1.02, 1))
         # plt.colorbar(scatter, ax=axes, label="Label")
 
 
