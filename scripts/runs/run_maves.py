@@ -174,6 +174,12 @@ def run_maves(label_dir, datasets, config_file,
                           num_top_acquisition_score_variants_per_round=
                           num_top_acquire_variants_per_round,
                           n_fold_cv=True)
+        run_sim_func(simulator, "c10", "ESM2_LLR", dataset,
+                     num_rounds=2,
+                     num_simulations=1,
+                     num_selected_variants_first_round=1,
+                     num_top_acquisition_score_variants_per_round=
+                     num_top_acquire_variants_per_round)
         continue
         run_sim_func(simulator, "c3_1", "RF_AL_FV64_64", dataset,
                           num_rounds=5,

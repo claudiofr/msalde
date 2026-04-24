@@ -24,7 +24,7 @@ additional_plots_info = [
         "compute_class_label_func": compute_gof_top_10_pct_func,
         "label": "GOF_10%",
         "config_id": "c3_1",
-        "run_name": "RF_AL_ALL_PRED",
+        "run_name": "RF_AL_VAL", # "RF_AL_ALL_PRED",
         "standardize_scores": False
     },
     {
@@ -32,7 +32,7 @@ additional_plots_info = [
         "compute_class_label_func": compute_gof_top_20_pct_func,
         "label": "GOF_20%",
         "config_id": "c3_1",
-        "run_name": "RF_AL_ALL_PRED",
+        "run_name": "RF_AL_VAL", # "RF_AL_ALL_PRED",
         "standardize_scores": False
     },
     {
@@ -40,7 +40,7 @@ additional_plots_info = [
         "compute_class_label_func": compute_lof_top_10_pct_func,
         "label": "LOF_10%",
         "config_id": "c3_1",
-        "run_name": "RF_AL_ALL_PRED",
+        "run_name": "RF_AL_VAL", # "RF_AL_ALL_PRED",
         "standardize_scores": False
     },
     {
@@ -48,7 +48,7 @@ additional_plots_info = [
         "compute_class_label_func": compute_lof_top_20_pct_func,
         "label": "LOF_20%",
         "config_id": "c3_1",
-        "run_name": "RF_AL_ALL_PRED",
+        "run_name": "RF_AL_VAL", # "RF_AL_ALL_PRED",
         "standardize_scores": False
     }
 ]
@@ -63,7 +63,7 @@ gof_dataset_al_llr_plot_info = [
                 "compute_class_label_func": None,
                 "label": "RF AL",
                 "config_id": "c3_1",
-                "run_name": "RF_AL_ALL_PRED",
+                "run_name": "RF_AL_VAL", # "RF_AL_ALL_PRED",
                 "standardize_scores": False
             },
             {
@@ -84,7 +84,7 @@ gof_dataset_al_llr_plot_info = [
                 "compute_class_label_func": compute_class_label_by_activity_threshold_func,
                 "label": "RF AL",
                 "config_id": "c3_1",
-                "run_name": "RF_AL_ALL_PRED",
+                "run_name": "RF_AL_VAL", # "RF_AL_ALL_PRED",
                 "standardize_scores": False
             },
             {
@@ -105,7 +105,7 @@ gof_dataset_al_llr_plot_info = [
                 "compute_class_label_func": None,
                 "label": "RF AL",
                 "config_id": "c3_1",
-                "run_name": "RF_AL_ALL_PRED",
+                "run_name": "RF_AL_VAL", # "RF_AL_ALL_PRED",
                 "standardize_scores": False
             },
             {
@@ -126,7 +126,7 @@ gof_dataset_al_llr_plot_info = [
                 "compute_class_label_func": None,
                 "label": "RF AL",
                 "config_id": "c3_1",
-                "run_name": "RF_AL_ALL_PRED",
+                "run_name": "RF_AL_VAL", # "RF_AL_ALL_PRED",
                 "standardize_scores": False
             },
             {
@@ -150,7 +150,7 @@ gof_dataset_plot_info = [
                 "compute_class_label_func": None,
                 "label": "GOF/LOF",
                 "config_id": "c3_1",
-                "run_name": "RF_AL_ALL_PRED",
+                "run_name": "RF_AL_VAL", # "RF_AL_ALL_PRED",
                 "standardize_scores": False
             },
         ]
@@ -163,7 +163,7 @@ gof_dataset_plot_info = [
                 "compute_class_label_func": compute_class_label_by_activity_threshold_func,
                 "label": "GOF/LOF",
                 "config_id": "c3_1",
-                "run_name": "RF_AL_ALL_PRED",
+                "run_name": "RF_AL_VAL", # "RF_AL_ALL_PRED",
                 "standardize_scores": False
             },
         ]
@@ -176,7 +176,7 @@ gof_dataset_plot_info = [
                 "compute_class_label_func": None,
                 "label": "GOF/LOF",
                 "config_id": "c3_1",
-                "run_name": "RF_AL_ALL_PRED",
+                "run_name": "RF_AL_VAL", # "RF_AL_ALL_PRED",
                 "standardize_scores": False
             }
         ]
@@ -189,7 +189,7 @@ gof_dataset_plot_info = [
                 "compute_class_label_func": None,
                 "label": "GOF/LOF",
                 "config_id": "c3_1",
-                "run_name": "RF_AL_ALL_PRED",
+                "run_name": "RF_AL_VAL", # "RF_AL_ALL_PRED",
                 "standardize_scores": False
             }
         ]

@@ -1,5 +1,6 @@
 from typing import Optional
 
+from datetime import datetime
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
@@ -172,6 +173,10 @@ class RandomForestLearner(Learner):
         self._max_samples = max_samples
         self._monotonic_cst = monotonic_cst
 
+    def _log(self, msg):
+        now = datetime.now()
+        print(now.strftime("%d %H:%M:%S:  ") + msg)
+
     def fit_model(
         self,
         variants: list[Variant],
@@ -222,7 +227,7 @@ class RandomForestLearner(Learner):
         # Log model info
         self.is_fitted = True
 
-        print(X.shape[0], "samples used to fit the model.")
+        self._log(str(X.shape[0]) + " samples used to fit the model.")
 
     def predict(
         self,
@@ -246,7 +251,7 @@ class RandomForestLearner(Learner):
         # Scale features
         X = self._scale_embeddings(X)
 
-        print(X.shape[0], "samples used to make predictions.")
+        self._log(str(X.shape[0]) + " samples used to make predictions.")
 
         # Make predictions
         has_estimators = hasattr(self._model, "estimators_") and \

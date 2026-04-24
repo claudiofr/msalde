@@ -40,11 +40,40 @@ class DESimulator:
         repository: ALDERepository,
         learner_factories: dict[str, LearnerFactory],
         acquisition_strategy_factories: dict[str, AcquisitionStrategyFactory],
-        log_likelihood_computer_factories: 
+        log_likelihood_computer_factories:
         dict[str, LogLikelihoodComputerFactory],
         run_config,
         sub_run_config
     ):
+        """Initialize the directed evolution simulator.
+
+        Parameters
+        ----------
+        dataset_repository : DatasetRepository
+            Repository for loading variant datasets and their associated
+            assay results.
+        protein_embedder_factories : dict[str, type[ProteinEmbedderFactory]]
+            Mapping from embedder type name to factory class for constructing
+            protein sequence embedders.
+        repository : ALDERepository
+            Persistence layer for storing run, sub-run, round, and simulation
+            records.
+        learner_factories : dict[str, LearnerFactory]
+            Mapping from learner type name to factory for constructing
+            surrogate models used during active learning.
+        acquisition_strategy_factories : dict[str, AcquisitionStrategyFactory]
+            Mapping from strategy type name to factory for constructing variant
+            acquisition strategies.
+        log_likelihood_computer_factories : dict[str, LogLikelihoodComputerFactory]
+            Mapping from computer type name to factory for constructing
+            log-likelihood feature computers.
+        run_config : object
+            Configuration object (keyed by config_id) specifying run-level
+            settings such as the default dataset and component types to use.
+        sub_run_config : object
+            Configuration object specifying the set of sub-run parameter
+            combinations to evaluate within each run.
+        """
         self._repository = repository
         self._dataset_repository = dataset_repository
         self._protein_embedder_factories = protein_embedder_factories
@@ -54,6 +83,10 @@ class DESimulator:
         log_likelihood_computer_factories
         self._run_config = run_config
         self._sub_run_config = sub_run_config
+
+    def _log(self, msg):
+        now = datetime.now()
+        print(now.strftime("%d %H:%M:%S:  ") + msg)
 
     def _load_assay_data(self, data_loader: VariantDataLoader
                          ) -> Tuple[list[Variant], list[AssayResult]]:
@@ -610,8 +643,66 @@ class DESimulator:
         save_last_round_predictions: bool = False,
         n_fold_cv: bool = False,
     ):
+        """Run active learning directed evolution simulations.
+
+        Loads the specified dataset, computes embeddings and log-likelihoods,
+        splits variants into simulation and test sets, then iterates over all
+        sub-run configurations defined in ``sub_run_config``. For each
+        sub-run, ``num_simulations`` independent simulations are executed,
+        each progressing through ``num_rounds`` of active learning: training a
+        surrogate model, scoring unlabelled variants, selecting the top
+        candidates, and revealing their assay results.
+
+        When ``n_fold_cv=True`` the run uses n-fold cross-validation instead
+        of the standard iterative protocol, which requires exactly 2 rounds.
+
+        Parameters
+        ----------
+        config_id : str
+            Key into ``run_config`` / ``sub_run_config`` that selects which
+            component types and hyperparameters to use.
+        name : str
+            Human-readable label stored with the run record.
+        descrip : str, optional
+            Free-text description stored with the run record.
+        num_simulations : int, default 1
+            Number of independent simulation replicates to execute per
+            sub-run.
+        num_rounds : int, default 5
+            Number of active learning rounds per simulation.
+        num_selected_variants_first_round : int, default 10
+            Number of variants selected randomly in the initial
+            (cold-start) round.
+        num_top_acquistion_score_variants_per_round : int, default 10
+            Number of variants selected by acquisition score in each
+            subsequent round.
+        num_top_prediction_score_variants_per_round : int, default 10
+            Number of variants selected by predicted score in each
+            subsequent round.
+        num_predictions_for_top_n_mean : int, default 10
+            Pool size used when computing top-N mean performance metrics.
+        test_fraction : float, default 0.2
+            Fraction of variants held out as a fixed test set for
+            evaluating generalisation performance.
+        random_seed : int, default 42
+            Seed for the random number generator used in data splitting
+            and first-round sampling.
+        dataset_name : str, optional
+            Name of the dataset to load. Defaults to the config's
+            ``default_dataset`` when ``None``.
+        save_all_predictions : bool, default False
+            If ``True``, persist per-variant predictions for every round
+            to the database.
+        save_last_round_predictions : bool, default False
+            If ``True``, persist per-variant predictions for the final
+            round only.
+        n_fold_cv : bool, default False
+            If ``True``, run n-fold cross-validation mode, which requires
+            ``num_rounds=2``. The number of folds is given by num_simulations.
+        """
         if dataset_name is None:
             dataset_name = self._run_config[config_id].default_dataset
+        self._log("start " + name + " " + dataset_name)
         data_loader_type = self._dataset_repository.get_data_loader_type(
             dataset_name)
         embedder_type, embedder_model_name, embedder_params, embedder \
@@ -863,7 +954,10 @@ class DESimulator:
                 )
             self._end_round(round.id, performance_metrics,
                             best_variant)
+            self._log("end round " + str(round_num) +
+                      " simulation " + str(simulation_num))
         self._end_simulation(simulation.id)
+        self._log("end simulation " + str(simulation_num))
 
     def _create_sub_run_context(
         self,

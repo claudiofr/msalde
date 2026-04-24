@@ -79,5 +79,5 @@ label_dir = "/sc/arion/work/fratac01/data/al/dms"
 # label_dir = "/home/claudiof"
 
 if __name__ == "__main__":
-    run_maves(label_dir, datasets, "./config/msaldem.yaml", 5)
+    run_maves(label_dir, datasets, "./config/msaldem.yaml")
 

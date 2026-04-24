@@ -169,7 +169,7 @@ class ESMEmbedder(ProteinEmbedder):
         from sklearn.decomposition import PCA
 
         # Flatten to (N_real_residues, D) using the mask
-        all_residues = embeddings[padding_mask]   # boolean index → (N, D)
+        all_residues = embeddings[padding_mask].cpu()   # boolean index → (N, D)
         print(f"Fitting GMM on {all_residues.shape[0]:,} residue embeddings "
             f"of dimension {all_residues.shape[1]}")
 
@@ -267,7 +267,7 @@ class ESMEmbedder(ProteinEmbedder):
         fisher_vectors = []
 
         for i in range(B):
-            residues = embeddings[i, attention_masks[i], :]   # (L_i, D) — no padding
+            residues = embeddings[i, attention_masks[i], :].cpu()   # (L_i, D) — no padding
             if pca is not None:
                 residues = pca.transform(residues)
             fv = self._compute_fisher_vector(residues, gmm,

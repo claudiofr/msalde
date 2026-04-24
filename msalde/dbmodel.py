@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Boolean, Column, Integer, Float, String, Date, DateTime, ForeignKey,
-    UniqueConstraint, text, Text
+    UniqueConstraint, text, Text, Index
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -98,6 +98,10 @@ class ALDERound(Base):
     best_variant_id = Column(Integer)
     start_ts = Column(DateTime)
     end_ts = Column(DateTime)
+
+    __table_args__ = (
+        Index('idx_alde_round_sim_round', 'simulation_id', 'round_num'),
+    )
 
     simulation = relationship("ALDESimulation", back_populates="rounds")
     round_variants = relationship("ALDERoundAcquiredVariant",

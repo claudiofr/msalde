@@ -16,17 +16,47 @@ class ALDEPlotter:
     def plot_roc_curve(self, axes, fpr, tpr, auc,
                        optimal_youden_fpr, title,
                        num_positive, num_negative):
-        label = f'AUC={str(round(auc, 2))}'
-        axes.plot(fpr, tpr,
-                  label=label)
-        axes.axvline(optimal_youden_fpr,
-                     color='red', linestyle='--', label='Youden Index')
-        axes.set_xlabel('False Positive Rate', fontsize=14)
-        axes.set_ylabel('True Positive Rate', fontsize=14)
-        # plt.tick_params(axis='both', labelsize=14)
-        axes.set_title(f'{title} (+ {str(num_positive)}/- {str(num_negative)})',
-                       fontsize=14)
-        axes.legend(fontsize=14)
+        # Colorblind-safe palette (Wong 2011, Nature Methods)
+        BLUE       = "#0072B2"
+        VERMILLION = "#D55E00"
+        GREY       = "#999999"
+
+        LW_DATA   = 1.0
+        LW_SPINE  = 0.5
+        FS_TITLE  = 7.5
+        FS_LABEL  = 7
+        FS_TICK   = 6
+        FS_LEGEND = 6
+
+        # ROC curve
+        axes.plot(fpr, tpr, color=BLUE, linewidth=LW_DATA,
+                  label=f"AUC = {auc:.2f}")
+        # Diagonal reference (random classifier)
+        axes.plot([0, 1], [0, 1], color=GREY, linewidth=LW_DATA * 0.8,
+                  linestyle="--", zorder=0)
+        # Optimal Youden index
+        axes.axvline(optimal_youden_fpr, color=VERMILLION,
+                     linestyle=":", linewidth=LW_DATA * 0.8,
+                     label="Youden index")
+
+        axes.set_xlim(0, 1)
+        axes.set_ylim(0, 1)
+        axes.set_xlabel("False positive rate", fontsize=FS_LABEL, labelpad=3)
+        axes.set_ylabel("True positive rate", fontsize=FS_LABEL, labelpad=3)
+        axes.set_title(
+            f"{title}\n(+{num_positive} / \u2212{num_negative})",
+            fontsize=FS_TITLE, pad=6)
+        axes.tick_params(axis="both", which="major",
+                         labelsize=FS_TICK, width=LW_SPINE,
+                         length=2, direction="out")
+        axes.legend(fontsize=FS_LEGEND, frameon=False,
+                    handlelength=1.2, handletextpad=0.4)
+        axes.patch.set_facecolor("white")
+        for spine in axes.spines.values():
+            spine.set_linewidth(LW_SPINE)
+            spine.set_color("black")
+        for side in ("top", "right"):
+            axes.spines[side].set_visible(False)
 
     def plot_pr_curve(self, axes, recall, precision, auc, title,
                       num_positive, num_negative):
@@ -41,6 +71,92 @@ class ALDEPlotter:
         axes.legend(fontsize=14)
 
     def plot_2d_landscape_by_position_aa(self, axes_top, axes_middle,
+                                         axes_bottom, position,
+                                         assay_scores, prediction_scores,
+                                         prediction_label,
+                                         counts,
+                                         count_label: str,
+                                         ss_track: list, residue_nums: list,
+                                         domains: list,
+                                         gof_assay_threshold,
+                                         lof_assay_threshold,
+                                         title):
+        # Colorblind-safe palette (Wong 2011, Nature Methods)
+        BLUE       = "#0072B2"
+        VERMILLION = "#D55E00"
+        GREY       = "#999999"
+        # Secondary-structure colours (muted, print-safe)
+        SS_COLORS  = {"H": "#CC79A7", "E": "#F0E442", "C": "#DDDDDD", "?": "white"}
+
+        LW_DATA    = 1.0   # data lines
+        LW_THRESH  = 0.6   # threshold reference lines
+        LW_SPINE   = 0.5   # axis borders
+        FS_TITLE   = 8
+        FS_LABEL   = 7
+        FS_TICK    = 6
+        FS_LEGEND  = 6
+
+        min_position = min(position)
+        max_position = max(position)
+        active_axes = [ax for ax in (axes_top, axes_middle, axes_bottom) if ax is not None]
+        for ax in active_axes:
+            ax.set_xlim(min_position, max_position)
+            ax.patch.set_facecolor("white")
+            for spine in ax.spines.values():
+                spine.set_linewidth(LW_SPINE)
+                spine.set_color("black")
+            ax.tick_params(axis="both", which="major",
+                           labelsize=FS_TICK, width=LW_SPINE, length=2,
+                           direction="out")
+
+        # --- Top panel: secondary structure + domain annotations ---
+        ss_bar_colors = [SS_COLORS[c] for c in ss_track]
+        axes_top.bar(residue_nums, [0.3] * len(residue_nums),
+                     color=ss_bar_colors, width=1.0, bottom=0.05,
+                     linewidth=0, zorder=1)
+        for domain in domains:
+            start = max(domain["start"], min_position)
+            end   = min(domain["end"],   max_position)
+            if start >= end:
+                continue
+            axes_top.axvspan(start, end, ymin=0.55, ymax=0.80,
+                             color=domain["color"], alpha=0.25, zorder=2,
+                             linewidth=0)
+            axes_top.text((start + end) / 2, 0.88, domain["name"],
+                          ha="center", va="center",
+                          fontsize=FS_LEGEND, fontweight="bold", zorder=3)
+        axes_top.set_ylim(0, 1)
+        axes_top.set_yticks([])
+        axes_top.set_xticks([])
+        axes_top.set_title(title, fontsize=FS_TITLE, pad=8)
+        for side in ("top", "right", "bottom", "left"):
+            axes_top.spines[side].set_visible(False)
+
+        # --- Middle panel: assay vs prediction scores ---
+        axes_middle.plot(position, assay_scores,
+                         linestyle="-", linewidth=LW_DATA,
+                         color=BLUE, label="Assay score")
+        axes_middle.plot(position, prediction_scores,
+                         linestyle="--", linewidth=LW_DATA,
+                         color=VERMILLION, label=prediction_label)
+        axes_middle.fill_between(position, assay_scores, prediction_scores,
+                                 where=(assay_scores > prediction_scores),
+                                 color=BLUE, alpha=0.12, linewidth=0)
+        axes_middle.fill_between(position, assay_scores, prediction_scores,
+                                 where=(assay_scores < prediction_scores),
+                                 color=VERMILLION, alpha=0.12, linewidth=0)
+        axes_middle.axhline(y=gof_assay_threshold, color=GREY,
+                            linestyle=":", linewidth=LW_THRESH, zorder=0)
+        axes_middle.axhline(y=lof_assay_threshold, color=GREY,
+                            linestyle=":", linewidth=LW_THRESH, zorder=0)
+        axes_middle.set_ylabel("Mean score", fontsize=FS_LABEL, labelpad=3)
+        axes_middle.set_xlabel("Residue position", fontsize=FS_LABEL, labelpad=3)
+        axes_middle.yaxis.set_major_formatter(
+            plt.ticker.FormatStrFormatter("%.1f"))
+        for side in ("top", "right"):
+            axes_middle.spines[side].set_visible(False)
+
+    def plot_2d_landscape_by_position_aa_old1(self, axes_top, axes_middle,
                                          axes_bottom, position,
                                          assay_scores, prediction_scores,
                                          prediction_label,
@@ -120,30 +236,6 @@ class ALDEPlotter:
             spine.set_visible(True)        # make sure they are visible
             spine.set_color('black')       # set border color
             spine.set_linewidth(1.0)       # set thickness
-
-    def plot_2d_landscape_by_position_aa_old1(self, axes_top, axes_bottom, position,
-                                         assay_scores, prediction_scores,
-                                         prediction_label,
-                                         counts,
-                                         count_label: str,
-                                         title):
-
-        line_styles = ['-', '--', '-.', ':']
-        colors = [(0.118, 0.565, 1.000, 0.7), (0.235, 0.702, 0.443, 0.7), 'orange', 'purple', 'cyan', 'magenta']
-        axes_top.plot(position, assay_scores, linestyle='-', color=colors[0], label='Assay Score')
-        axes_top.set_ylabel('Assay Score')
-        axes_top2 = axes_top.twinx()
-        axes_top2.plot(position, prediction_scores, linestyle='--', color=colors[1],
-                       label=prediction_label)
-        axes_top2.set_ylabel(prediction_label)
-        axex_top.fill_between(position, assay_scores, prediction_scores, color='lightblue', alpha=0.5)
-        axes_top.legend(loc='lower right', bbox_to_anchor=(1.1, 1.2))
-        axes_top2.legend(loc='lower right', bbox_to_anchor=(1.1, 1.1))
-        axes_bottom.plot(position, counts, linestyle='-', color=colors[2],
-                         label=count_label)
-        axes_bottom.set_ylabel(count_label)
-        axes_bottom.set_xlabel('Sequence Space (Position AA Bin)')
-        axes_top.set_title(f"{title}")
 
     def plot_2d_landscape_by_position_aa_old(self, axes, position,
                                          y_value_lists, line_labels,
@@ -232,8 +324,26 @@ class ALDEPlotter:
     def plot_roc_auc_by_round_multi(self, axes, results_list,
                        title):
 
-        colors = plt.cm.tab10.colors   # 10 distinct colors
-        if len(results_list) > len(colors):
+        # Colorblind-safe palette (Wong 2011, Nature Methods)
+        COLORS = [
+            "#0072B2",  # blue
+            "#D55E00",  # vermillion
+            "#009E73",  # green
+            "#CC79A7",  # pink
+            "#E69F00",  # orange
+            "#56B4E9",  # sky blue
+            "#F0E442",  # yellow
+            "#000000",  # black
+        ]
+        LW_DATA   = 1.0
+        LW_SPINE  = 0.5
+        FS_TITLE  = 7.5
+        FS_LABEL  = 7
+        FS_TICK   = 6
+        FS_LEGEND = 6
+        MS        = 3
+
+        if len(results_list) > len(COLORS):
             raise ValueError("Too many result sets to plot; increase color palette.")
 
         for i, results in enumerate(results_list):
@@ -244,115 +354,130 @@ class ALDEPlotter:
             num_negative = results["num_negative"]
             rounds = aucs["round_num"].astype(int)
             max_rounds = rounds.max()
-            axes.set_xlim(right=max_rounds+1)
+            axes.set_xlim(right=max_rounds + 1)
             axes.errorbar(rounds, aucs["auc"],
                           yerr=aucs["auc_std"],
-                          marker='o', linestyle='-',
-                          label=f'{label} (+{num_positive}/-{num_negative})',
-                          color=colors[i]
-            )
-            # Add horizontal dashed line for LLR
-
-            # Short horizontal dashed line at y = 5, spanning x = 2 to x = 6
+                          marker='o', markersize=MS, linestyle='-',
+                          linewidth=LW_DATA, capsize=2, capthick=LW_DATA * 0.8,
+                          elinewidth=LW_DATA * 0.8,
+                          label=f'{label} (+{num_positive}/\u2212{num_negative})',
+                          color=COLORS[i])
             axes.hlines(
                 y=llr_auc,
                 xmin=max_rounds + 0.2,
                 xmax=max_rounds + 1.0,
-                colors=colors[i],
+                colors=COLORS[i],
                 linestyles='dashed',
-                linewidth=2
-            )
-            """
-            axes.errorbar(results["round_num"], results["auc_mean"],
-                            yerr=results["auc_std"], fmt='-o', capsize=5)
-            """
-        axes.set_title(f'{title}', fontsize=16)
-        axes.set_ylabel('AUC', fontsize=12)
-        axes.set_xlabel('Round', fontsize=12)
+                linewidth=LW_DATA)
+
+        axes.axhline(0.5, color="#999999", linewidth=LW_SPINE, linestyle="--", zorder=0)
+        axes.set_title(title, fontsize=FS_TITLE, pad=6)
+        axes.set_ylabel('AUC', fontsize=FS_LABEL, labelpad=3)
+        axes.set_xlabel('Round', fontsize=FS_LABEL, labelpad=3)
         axes.set_xticks(rounds)
-
-        # Add a right-side label manually
+        axes.tick_params(axis="both", which="major",
+                         labelsize=FS_TICK, width=LW_SPINE,
+                         length=2, direction="out")
         axes.text(
-            1.02, 0.5, "LLR AUC",          # x, y in axes coordinates
+            1.02, 0.5, "LLR AUC",
             transform=axes.transAxes,
-            rotation=90,
-            va='center',
-            ha='left'
-        )
-
-        #axes.axhline(llr_auc, color='black', linestyle='--', label='Log Likelihood Ratio')
-        axes.legend(fontsize=11, loc='upper left', framealpha=0.0)
-        # plt.colorbar(scatter, ax=axes, label="Label")
+            fontsize=FS_TICK, rotation=90,
+            va='center', ha='left')
+        axes.legend(fontsize=FS_LEGEND, frameon=False,
+                    handlelength=1.2, handletextpad=0.4,
+                    loc='upper left')
+        axes.patch.set_facecolor("white")
+        for spine in axes.spines.values():
+            spine.set_linewidth(LW_SPINE)
+            spine.set_color("black")
+        for side in ("top", "right"):
+            axes.spines[side].set_visible(False)
 
 
     def plot_metric_by_domain_multi(self, axes, results_list,
                                     metric_name: str,
                        title):
 
-        #plt.rcParams.update({
-        #    "text.usetex": True,
-        #})
-        colors = plt.cm.tab10.colors   # 10 distinct colors
-        if len(results_list) > len(colors):
-            raise ValueError("Too many result sets to plot; increase color palette.")
+        # Colorblind-safe palette (Wong 2011, Nature Methods)
+        COLORS = [
+            "#0072B2",  # blue
+            "#D55E00",  # vermillion
+            "#009E73",  # green
+            "#CC79A7",  # pink
+            "#E69F00",  # orange
+            "#56B4E9",  # sky blue
+            "#F0E442",  # yellow
+            "#000000",  # black
+        ]
+        LW_DATA   = 1.0
+        LW_SPINE  = 0.5
+        FS_TITLE  = 7.5
+        FS_LABEL  = 7
+        FS_TICK   = 6
+        FS_LEGEND = 6
+        MS        = 3    # marker size
 
-        # We will build custom x-tick labels with domain names and +/- counts
-        # in xtick_label_info_list. We only do this if the keys,
-        # "num_positive" and "num_negative" exist in the result dict.
-        # Each element in the list corresponds to a 
-        # tuple with the first element being the domain name and the second element
-        # being a list of (num_positive, num_negative) tuples for each result set in
-        # results_list. So the structure will be:
-        # [ (domain_name, [ (num_pos_1, num_neg_1), (num_pos_2, num_neg_2), ... ] ), ... ]
-        # So for each domain along x axis, we will have the name and a 
-        # list of counts for each plot represented in results_list.
+        if len(results_list) > len(COLORS):
+            raise ValueError("Too many result sets to plot; increase color palette.")
 
         xtick_label_info_list = None
         display_domain_counts = True
         for i, result_dict in enumerate(results_list):
             results = result_dict["results"]
             label = result_dict["label"]
-            #num_positive = results["num_positive"]
-            #num_negative = results["num_negative"]
             if not xtick_label_info_list:
                 domain_names = results["domain"]
                 xtick_label_info_list = [(domain_name, []) for domain_name in domain_names]
-            # Update the counts for each domain
             for domain_ind, result in results.iterrows():
                 if "num_positive" not in result:
                     display_domain_counts = False
                     break
-                xtick_label_info_list[domain_ind][1].append((result["num_positive"], result["num_negative"]))
+                xtick_label_info_list[domain_ind][1].append(
+                    (result["num_positive"], result["num_negative"]))
             axes.errorbar(domain_names,
-                      results["metric"],
-                      yerr=results["metric_std"],
-                      marker='o', linestyle='-',
-                      label=f'{label}',
-                      color=colors[i]
-            )
+                          results["metric"],
+                          yerr=results["metric_std"],
+                          marker='o', markersize=MS, linestyle='-',
+                          linewidth=LW_DATA, capsize=2, capthick=LW_DATA * 0.8,
+                          elinewidth=LW_DATA * 0.8,
+                          label=label,
+                          color=COLORS[i])
 
-        axes.set_title(f'{title}', fontsize=16)
-        axes.set_ylabel(metric_name, fontsize=12)
-        # axes.set_xlabel('Domain', fontsize=12)
+        axes.set_title(title, fontsize=FS_TITLE, pad=6)
+        axes.set_ylabel(metric_name, fontsize=FS_LABEL, labelpad=3)
+        axes.axhline(0.5, color="#999999", linewidth=LW_SPINE, linestyle="--", zorder=0)
 
-        # For each domain, set custom x-tick labels with domain name and +/- counts
-        # for each plot in results_list. We will place the domain name at y=-0.1
-        # and the counts below that, with some vertical spacing.
         axes.set_xticks(range(len(results)))
-        axes.set_xticklabels([])  # Clear default labels
-        positions = axes.get_xticks() 
+        axes.set_xticklabels([])
+        positions = axes.get_xticks()
         for xpos, label_info in zip(positions, xtick_label_info_list):
-            axes.text(xpos, -0.1, label_info[0], ha="center", va="top", transform=axes.get_xaxis_transform() )
+            axes.text(xpos, -0.08, label_info[0], ha="center", va="top",
+                      fontsize=FS_TICK, rotation=0,
+                      transform=axes.get_xaxis_transform())
             if not display_domain_counts:
                 continue
-            for i, (variant_counts, color) in enumerate(zip(label_info[1], colors[:len(results_list)])):
-                text = f"+{variant_counts[0]}/-{variant_counts[1]}"
-                axes.text(xpos, -0.2 - 0.08*i, text, ha="center", va="top", color=color, transform=axes.get_xaxis_transform() )
+            for j, (variant_counts, color) in enumerate(
+                    zip(label_info[1], COLORS[:len(results_list)])):
+                axes.text(xpos, -0.22 - 0.10 * j,
+                          f"+{variant_counts[0]}/\u2212{variant_counts[1]}",
+                          ha="center", va="top", fontsize=FS_TICK - 1,
+                          rotation=0, color=color,
+                          transform=axes.get_xaxis_transform())
+
+        axes.tick_params(axis="both", which="major",
+                         labelsize=FS_TICK, width=LW_SPINE,
+                         length=2, direction="out")
+        axes.patch.set_facecolor("white")
+        for spine in axes.spines.values():
+            spine.set_linewidth(LW_SPINE)
+            spine.set_color("black")
+        for side in ("top", "right"):
+            axes.spines[side].set_visible(False)
 
         if len(results_list) > 1:
-            axes.legend(fontsize=11, loc='upper left', framealpha=0.0,
-                        bbox_to_anchor=(1.02, 1))
-        # plt.colorbar(scatter, ax=axes, label="Label")
+            axes.legend(fontsize=FS_LEGEND, frameon=False,
+                        handlelength=1.2, handletextpad=0.4,
+                        loc='upper left', bbox_to_anchor=(1.02, 1))
 
 
     def plot_metric_by_domain(self, axes, results,

@@ -523,8 +523,7 @@ def show_last_round_auc_by_domain(
 
 
 def show_roc_auc_by_round(
-        repo, var_repo, plotter: ALDEPlotter, axes, config_id,
-        run_name,
+        repo, var_repo, plotter: ALDEPlotter, axes,
         assay_source, protein_symbol,
         plot_info_list,
         class_label_column, title,
@@ -539,6 +538,8 @@ def show_roc_auc_by_round(
         return 0
     llr_results_all = llr_results_all[llr_results_all["round_num"] == 2]
     
+    run_name = plot_info_list[0]["run_name"]
+    config_id = plot_info_list[0]["config_id"]
     results_all = repo.get_variant_scores_by_simulation_round(
         config_id=config_id,
         dataset_name=assay_source,
@@ -689,7 +690,7 @@ def show_roc_prediction_assay_curve(
     num_negative = len(results) - num_positive
     plotter.plot_roc_curve(axes, fpr, tpr, auc, 
                            fpr[optimal_youden_index],
-                           title=f"{assay_source}/{run_name} (AUC={auc:.3f})",
+                           title=f"{title} (AUC={auc:.3f})",
                            num_positive=num_positive,
                            num_negative=num_negative)
     if return_data:
@@ -778,27 +779,48 @@ def show_plots_old(show_plot_func, datasets, projection='rectilinear'):
 
 
 def create_grid_row(grid, fig, row_ind, col_ind):
-    # Create an inner grid with 3 rows (vertical subplots) inside each outer cell
+    # Create an inner grid with 2 rows (SS track + scores) inside each outer cell
     inner_grid = gridspec.GridSpecFromSubplotSpec(
-        3, 1, subplot_spec=grid[row_ind, col_ind], hspace=0.2,
-        height_ratios=[1, 4, 1],
+        2, 1, subplot_spec=grid[row_ind, col_ind], hspace=0.1,
+        height_ratios=[1, 4],
     )
-    
-    # Top subplot
+
     axes_top = fig.add_subplot(inner_grid[0])
     axes_top.grid(False)
-    
-    # Bottom subplot
+
     axes_middle = fig.add_subplot(inner_grid[1])
     axes_middle.grid(False)
-    axes_bottom = fig.add_subplot(inner_grid[2])
-    axes_bottom.grid(False)
-    return axes_top, axes_middle, axes_bottom    
+    return axes_top, axes_middle
 
 
 def show_protein_landscape_plots(show_plot_func, dataset_plot_info,
                                  data_file: str = None,
                                  projection='rectilinear'):
+    import matplotlib
+    # Publication-quality rcParams (7-pt base, sans-serif, embeddable fonts)
+    matplotlib.rcParams.update({
+        "font.family":         "sans-serif",
+        "font.sans-serif":     ["Arial", "Helvetica", "DejaVu Sans"],
+        "font.size":           7,
+        "axes.labelsize":      7,
+        "axes.titlesize":      8,
+        "xtick.labelsize":     6,
+        "ytick.labelsize":     6,
+        "legend.fontsize":     6,
+        "lines.linewidth":     1.0,
+        "axes.linewidth":      0.5,
+        "xtick.major.width":   0.5,
+        "ytick.major.width":   0.5,
+        "xtick.major.size":    2,
+        "ytick.major.size":    2,
+        "pdf.fonttype":        42,   # embed as TrueType in PDF
+        "ps.fonttype":         42,
+        "figure.facecolor":    "white",
+        "axes.facecolor":      "white",
+        "savefig.dpi":         300,
+        "savefig.bbox":        "tight",
+    })
+
     container = ALDEContainer("./config/msaldem.yaml")
     # container = ALDEContainer("./config/msalde.yaml")
     repo = container.query_repository
@@ -806,34 +828,30 @@ def show_protein_landscape_plots(show_plot_func, dataset_plot_info,
     var_repo = container.variant_repository
     plotter = container.plotter
 
-    # datasets_ = datasets[:5]
-
     config_ids = ["c10", "c3_1", "c3_2"]
-    run_names = ["ESM2_LLR", "RF_AL", "RFTRAIN_ALL"]
-    run_names = ["ESM2_LLR_ALL_PRED", "RF_AL_ALL_PRED", "RFTRAIN_ALL_ALL_PRED"]
-    titles = ["LogLikelihood", "RandomForest AL", "RandomForest MonteCarlo"]
+    run_names = ["ESM2_LLR_ALL_PRED", "RF_AL_VAL", "RF_5_FOLD_CV"]
+    titles = ["LLR", "RF AL", "5 FOLD CV"]
     standardize_scores = [True, False, False]
     num_models = len(config_ids)
 
     num_rows = len(dataset_plot_info) * num_models
 
-    fig = plt.figure(figsize=(20, 10*num_rows))
-    fig.patch.set_facecolor('white')
-    grid = gridspec.GridSpec(num_rows, 1, figure=fig, hspace=.2) # wspace=0.4, hspace=0.4)
+    # Journal double-column width (180 mm ≈ 7.09 in); each outer row ~1.5 in
+    fig_width_in  = 7.09
+    panel_height_in = 1.5
+    fig = plt.figure(figsize=(fig_width_in, panel_height_in * num_rows))
+    fig.patch.set_facecolor("white")
+    grid = gridspec.GridSpec(num_rows, 1, figure=fig, hspace=1.0)
 
-    #fig, axes = plt.subplots(num_rows, 3, figsize=(20, 6*len(datasets_)),
-    #                         subplot_kw={'projection': projection})
-    #axes = axes.flatten()
-    plt.style.use('seaborn-v0_8')
     save_data_to_file = data_file is not None
     if save_data_to_file:
         all_landscape_data = []
         all_domain_data = []
     col_ind = 0
     row_ind = 0
+    last_axes_middle = None
     for plot_info in dataset_plot_info:
         dataset = plot_info["dataset"]
-        # increment_row_id = True
         for model_ind in range(num_models):
             config_id = config_ids[model_ind]
             run_name = run_names[model_ind]
@@ -842,17 +860,16 @@ def show_protein_landscape_plots(show_plot_func, dataset_plot_info,
             results = get_last_round_scores_by_config_dataset_run(
                 repo, config_id=config_id, dataset_name=dataset, run_name=run_name)
             if len(results) == 0:
-                # increment_row_id = False
                 break
             results = prep_results_for_protein_landscape(
                 results, standardize_scores_flag)
-            secondary_structure_info = pdb_repo.get_secondary_structure(
-                dataset)
-            axes_top, axes_middle, axes_bottom = create_grid_row(
+            secondary_structure_info = pdb_repo.get_secondary_structure(dataset)
+            axes_top, axes_middle = create_grid_row(
                 grid, fig, row_ind, col_ind)
+            last_axes_middle = axes_middle
 
-            landscape_data = show_plot_func(var_repo, plotter, results, axes_top, 
-                           axes_middle, axes_bottom, dataset,
+            landscape_data = show_plot_func(var_repo, plotter, results, axes_top,
+                           axes_middle, None, dataset,
                            dataset,
                            plot_info["plots"][0],
                            secondary_structure_info[0],
@@ -860,22 +877,53 @@ def show_protein_landscape_plots(show_plot_func, dataset_plot_info,
                            secondary_structure_info[2],
                            "class_label",
                            title, save_data_to_file)
+            is_last_row = (plot_info is dataset_plot_info[-1]
+                           and model_ind == num_models - 1)
+            if not is_last_row:
+                axes_middle.set_xlabel("")
             if save_data_to_file and landscape_data is not None:
                 all_landscape_data.append(landscape_data)
                 domains = pd.DataFrame(secondary_structure_info[2])
                 domains["assay_source"] = dataset
                 all_domain_data.append(domains)
-            
+
             row_ind += 1
 
-        # if increment_row_id:
-        #     row_ind += 1
+    # Shared legend below the last plot — two groups side by side
+    if last_axes_middle is not None:
+        import matplotlib.patches as _mp
+        from matplotlib.lines import Line2D as _L2D
+        _BLUE, _VERM = "#0072B2", "#D55E00"
+        _FS = 6
+        _LW = 1.0
+        ss_handles = [
+            _mp.Patch(facecolor="#CC79A7", edgecolor="none", label="Helix"),
+            _mp.Patch(facecolor="#F0E442", edgecolor="none", label="Strand"),
+            _mp.Patch(facecolor="#DDDDDD", edgecolor="none", label="Coil"),
+        ]
+        score_handles = [
+            _L2D([0], [0], color=_BLUE,  lw=_LW, linestyle="-",  label="Assay score"),
+            _L2D([0], [0], color=_VERM,  lw=_LW, linestyle="--", label="Prediction"),
+        ]
+        leg1 = last_axes_middle.legend(
+            handles=ss_handles,
+            loc="upper left", bbox_to_anchor=(0.0, -0.92),
+            borderaxespad=0, frameon=False, fontsize=_FS,
+            ncol=3, handlelength=1, handletextpad=0.4, columnspacing=0.8,
+        )
+        last_axes_middle.add_artist(leg1)
+        last_axes_middle.legend(
+            handles=score_handles,
+            loc="upper left", bbox_to_anchor=(0.42, -0.92),
+            borderaxespad=0, frameon=False, fontsize=_FS,
+            ncol=2, handlelength=1.5, handletextpad=0.4, columnspacing=0.8,
+        )
 
-    # for j in range(ind, len(axes)):
-    #    fig.delaxes(axes[j])
-
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.subplots_adjust(hspace=0.5, wspace=0.3)
+    plt.tight_layout()
+    plt.subplots_adjust(bottom=0.24)  # space for shared legend below last plot
+    if data_file is not None:
+        fig.savefig(data_file + ".pdf",  format="pdf")
+        fig.savefig(data_file + ".png",  format="png",  dpi=300)
     plt.show()
     if save_data_to_file:
         pd.concat(all_landscape_data, ignore_index=True).to_csv(
@@ -901,7 +949,7 @@ def show_roc_prediction_assay_plots(show_plot_func, datasets, assay_types,
     config_ids = ["c10", "c3_1", "c3_2"]
     # run_names = ["ESM2_LLR", "RF_AL", "RFTRAIN_ALL"]
     # run_names = ["ESM2_LLR_ALL_PRED", "RF_AL_ALL_PRED", "RFTRAIN_ALL_ALL_PRED"]
-    titles = ["LogLikelihood", "RandomForest AL", "RandomForest Train20%"]
+    titles = ["LLR", "RF AL", "RF 5 FOLD CV"]
     standardize_scores = [True, False, False]
     num_models = len(config_ids)
 
@@ -909,14 +957,34 @@ def show_roc_prediction_assay_plots(show_plot_func, datasets, assay_types,
     num_rows_per_dataset = num_models// num_cols + int(num_models % num_cols > 0)
     num_rows = len(datasets_) * num_rows_per_dataset
 
-    fig = plt.figure(figsize=(20, 5*num_rows))
-    fig.patch.set_facecolor('white')
-    grid = gridspec.GridSpec(num_rows, num_cols, figure=fig, hspace=.2) # wspace=0.4, hspace=0.4)
+    # Publication-quality rcParams (Nature / Cell style)
+    plt.rcParams.update({
+        "font.family":        "sans-serif",
+        "font.sans-serif":    ["Arial", "Helvetica", "DejaVu Sans"],
+        "font.size":          7,
+        "axes.titlesize":     8,
+        "axes.labelsize":     7,
+        "xtick.labelsize":    6,
+        "ytick.labelsize":    6,
+        "legend.fontsize":    6,
+        "lines.linewidth":    1.0,
+        "axes.linewidth":     0.5,
+        "xtick.major.width":  0.5,
+        "ytick.major.width":  0.5,
+        "pdf.fonttype":       42,
+        "ps.fonttype":        42,
+        "figure.dpi":         300,
+        "savefig.dpi":        300,
+    })
 
-    #fig, axes = plt.subplots(num_rows, 3, figsize=(20, 6*len(datasets_)),
-    #                         subplot_kw={'projection': projection})
-    #axes = axes.flatten()
-    plt.style.use('seaborn-v0_8')
+    # 2.3 in per panel column; ~2.5 in per row (square ROC)
+    panel_w = 2.3
+    panel_h = 2.5
+    fig = plt.figure(figsize=(panel_w * num_cols, panel_h * num_rows))
+    fig.patch.set_facecolor("white")
+    grid = gridspec.GridSpec(num_rows, num_cols, figure=fig,
+                             hspace=0.6, wspace=0.45)
+
     all_data_dfs = []
     return_data = output_data_file is not None
     row_ind = 0
@@ -949,8 +1017,7 @@ def show_roc_prediction_assay_plots(show_plot_func, datasets, assay_types,
             if return_data:
                 all_data_dfs.append(data_df)
 
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.subplots_adjust(hspace=0.5, wspace=0.3)
+    plt.tight_layout()
     plt.show()
     if return_data:
         pd.concat(all_data_dfs, ignore_index=True).to_csv(
@@ -1031,18 +1098,39 @@ def show_auc_by_round_plots(show_plot_func, dataset_plot_info,
     standardize_scores = [False]
     num_models = len(config_ids)
 
-    num_cols = 2
-    num_rows_per_dataset = num_models// num_cols + int(num_models % num_cols > 0)
-    num_rows = len(dataset_plot_info) * num_rows_per_dataset
+    num_cols = 1
+    num_rows = len(dataset_plot_info) * num_models
 
-    fig = plt.figure(figsize=(20, 5*num_rows))
+    # Nature publication figure standards:
+    # double column = 183 mm (~7.2 in); 300 dpi minimum
+    plt.rcParams.update({
+        "figure.facecolor": "white",
+        "axes.facecolor":   "white",
+        "font.family":      "sans-serif",
+        "font.sans-serif":  ["Arial", "Helvetica", "DejaVu Sans"],
+        "font.size":        7,
+        "axes.titlesize":   7.5,
+        "axes.labelsize":   7,
+        "xtick.labelsize":  6,
+        "ytick.labelsize":  6,
+        "legend.fontsize":  6,
+        "lines.linewidth":  1.0,
+        "axes.linewidth":   0.5,
+        "xtick.major.width": 0.5,
+        "ytick.major.width": 0.5,
+        "xtick.major.size":  2,
+        "ytick.major.size":  2,
+        "pdf.fonttype":     42,   # embed fonts as TrueType
+        "svg.fonttype":     "none",
+    })
+
+    fig_width_in  = 7.2   # 183 mm — Nature double-column
+    row_height_in = 2.5
+    fig = plt.figure(figsize=(fig_width_in, row_height_in * num_rows))
     fig.patch.set_facecolor('white')
-    grid = gridspec.GridSpec(num_rows, num_cols, figure=fig, hspace=.4) # wspace=0.4, hspace=0.4)
+    grid = gridspec.GridSpec(num_rows, num_cols, figure=fig,
+                             hspace=0.8, wspace=0.4)
 
-    #fig, axes = plt.subplots(num_rows, 3, figsize=(20, 6*len(datasets_)),
-    #                         subplot_kw={'projection': projection})
-    #axes = axes.flatten()
-    plt.style.use('seaborn-v0_8')
     return_data = output_data_file is not None
     all_data_dfs = []
     row_ind = 0
@@ -1058,8 +1146,7 @@ def show_auc_by_round_plots(show_plot_func, dataset_plot_info,
             # Add a subplot to the grid at (row_ind, col_ind)
             axes = fig.add_subplot(grid[row_ind, col_ind])
             results_count, data_df = show_plot_func(
-                repo, var_repo, plotter, axes, config_id,
-                run_name,
+                repo, var_repo, plotter, axes,
                 dataset, dataset,
                 plot_info['plots'],
                 class_label_column="class_label",
@@ -1076,12 +1163,18 @@ def show_auc_by_round_plots(show_plot_func, dataset_plot_info,
             if return_data:
                 all_data_dfs.append(data_df)
 
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.subplots_adjust(hspace=0.5, wspace=0.3)
+    plt.tight_layout()
+    if output_data_file is not None:
+        fig.savefig(output_data_file + ".pdf", dpi=600, bbox_inches="tight",
+                    facecolor="white")
+        fig.savefig(output_data_file + ".tiff", dpi=600, bbox_inches="tight",
+                    facecolor="white")
+        fig.savefig(output_data_file + ".png", dpi=600, bbox_inches="tight",
+                    facecolor="white")
+        if return_data:
+            pd.concat(all_data_dfs, ignore_index=True).to_csv(
+                output_data_file + ".csv", index=False)
     plt.show()
-    if return_data:
-        pd.concat(all_data_dfs, ignore_index=True).to_csv(
-            output_data_file + ".csv", index=False)
 
 
 def show_metric_by_domain_plots_multi(show_plot_func, dataset_plot_info,
@@ -1099,18 +1192,40 @@ def show_metric_by_domain_plots_multi(show_plot_func, dataset_plot_info,
     standardize_scores = [False]
     num_models = len(config_ids)
 
+    # Grid layout: datasets fill left-to-right, then wrap to next row.
     num_cols = 1
-    num_rows_per_dataset = num_models// num_cols + int(num_models % num_cols > 0)
-    num_rows = len(dataset_plot_info) * num_rows_per_dataset
+    num_rows = (len(dataset_plot_info) * num_models + num_cols - 1) // num_cols
 
-    fig = plt.figure(figsize=(20, 5*num_rows))
+    # Nature publication figure standards:
+    # double column = 183 mm (~7.2 in); 300 dpi minimum
+    plt.rcParams.update({
+        "figure.facecolor": "white",
+        "axes.facecolor":   "white",
+        "font.family":      "sans-serif",
+        "font.sans-serif":  ["Arial", "Helvetica", "DejaVu Sans"],
+        "font.size":        7,
+        "axes.titlesize":   7.5,
+        "axes.labelsize":   7,
+        "xtick.labelsize":  6,
+        "ytick.labelsize":  6,
+        "legend.fontsize":  6,
+        "lines.linewidth":  1.0,
+        "axes.linewidth":   0.5,
+        "xtick.major.width": 0.5,
+        "ytick.major.width": 0.5,
+        "xtick.major.size":  2,
+        "ytick.major.size":  2,
+        "pdf.fonttype":     42,   # embed fonts as TrueType
+        "svg.fonttype":     "none",
+    })
+
+    fig_width_in  = 11.0
+    row_height_in = 3.5
+    fig = plt.figure(figsize=(fig_width_in, row_height_in * num_rows))
     fig.patch.set_facecolor('white')
-    grid = gridspec.GridSpec(num_rows, num_cols, figure=fig, hspace=.8) # wspace=0.4, hspace=0.4)
+    grid = gridspec.GridSpec(num_rows, num_cols, figure=fig,
+                             hspace=1.2, wspace=0.4)
 
-    #fig, axes = plt.subplots(num_rows, 3, figsize=(20, 6*len(datasets_)),
-    #                         subplot_kw={'projection': projection})
-    #axes = axes.flatten()
-    plt.style.use('seaborn-v0_8')
     return_data = output_data_file is not None
     all_data_dfs = []
     row_ind = 0
@@ -1142,12 +1257,17 @@ def show_metric_by_domain_plots_multi(show_plot_func, dataset_plot_info,
             if return_data:
                 all_data_dfs.append(data_df)
 
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.subplots_adjust(hspace=0.5, wspace=0.3)
-    plt.show()
-    if return_data:
+    plt.tight_layout()
+    if output_data_file is not None:
+        fig.savefig(output_data_file + ".pdf", dpi=600, bbox_inches="tight",
+                    facecolor="white")
+        fig.savefig(output_data_file + ".tiff", dpi=600, bbox_inches="tight",
+                    facecolor="white")
+        fig.savefig(output_data_file + ".png", dpi=600, bbox_inches="tight",
+                    facecolor="white")
         pd.concat(all_data_dfs, ignore_index=True).to_csv(
-            output_data_file + ".csv", index=False) 
+            output_data_file + ".csv", index=False)
+    plt.show()
 
 
 def show_metric_by_domain_plots(show_plot_func, dataset_plot_info):
