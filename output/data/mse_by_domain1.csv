@@ -1,0 +1,23 @@
+| Protein | Domain | MSE (relative) |
+|---------|--------|----------------|
+| MC4R | ECD | −0.654 |
+| MC4R | ICL2 | −0.466 |
+| MC4R | C-tail | −0.461 |
+| MC4R | ECL3 | −0.955 |
+| MC4R | TM5 | −0.076 |
+| MC4R | TM6 | −0.193 |
+| MC4R | TM1 | +0.162 |
+| MC4R | ICL1 | +0.193 |
+| MC4R | TM3 | +0.101 |
+| MC4R | ECL2 | +0.525 |
+| MC4R | TM7 | +0.514 |
+| MC4R | ICL3 | +0.419 |
+| MC4R | TM4 | +0.341 |
+| HXK4 | Hinge 2 | +0.405 |
+| HXK4 | Large domain (N-lobe) | +0.309 |
+| HXK4 | Hinge 1 | −0.670 |
+| PTEN | C-terminal tail | −0.926 |
+| PTEN | C2 domain | −0.764 |
+| PTEN | Linker | −0.834 |
+| PTEN | Phosphatase domain | −0.085 |
+| SRC | Kinase | +0.045 |

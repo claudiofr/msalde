@@ -1,0 +1,85 @@
+name,start,end,color,assay_source
+ECD,1,35,grey,MC4R
+TM1,36,65,green,MC4R
+ICL1,66,71,orange,MC4R
+TM2,72,102,green,MC4R
+ICL2,103,109,orange,MC4R
+TM3,110,140,green,MC4R
+ECL2,141,149,blue,MC4R
+TM4,150,175,green,MC4R
+ICL3,176,199,orange,MC4R
+TM5,200,230,green,MC4R
+ECL3,231,239,blue,MC4R
+TM6,240,270,green,MC4R
+ICL4,271,279,orange,MC4R
+TM7,280,305,green,MC4R
+C-tail,306,332,grey,MC4R
+ECD,1,35,grey,MC4R
+TM1,36,65,green,MC4R
+ICL1,66,71,orange,MC4R
+TM2,72,102,green,MC4R
+ICL2,103,109,orange,MC4R
+TM3,110,140,green,MC4R
+ECL2,141,149,blue,MC4R
+TM4,150,175,green,MC4R
+ICL3,176,199,orange,MC4R
+TM5,200,230,green,MC4R
+ECL3,231,239,blue,MC4R
+TM6,240,270,green,MC4R
+ICL4,271,279,orange,MC4R
+TM7,280,305,green,MC4R
+C-tail,306,332,grey,MC4R
+ECD,1,35,grey,MC4R
+TM1,36,65,green,MC4R
+ICL1,66,71,orange,MC4R
+TM2,72,102,green,MC4R
+ICL2,103,109,orange,MC4R
+TM3,110,140,green,MC4R
+ECL2,141,149,blue,MC4R
+TM4,150,175,green,MC4R
+ICL3,176,199,orange,MC4R
+TM5,200,230,green,MC4R
+ECL3,231,239,blue,MC4R
+TM6,240,270,green,MC4R
+ICL4,271,279,orange,MC4R
+TM7,280,305,green,MC4R
+C-tail,306,332,grey,MC4R
+Small domain,1,64,blue,HXK4
+Hinge 1,65,72,orange,HXK4
+Large domain (N‑lobe),73,180,green,HXK4
+Hinge 2,181,200,orange,HXK4
+Large domain (C‑lobe),201,300,green,HXK4
+C‑terminal tail,301,465,grey,HXK4
+Small domain,1,64,blue,HXK4
+Hinge 1,65,72,orange,HXK4
+Large domain (N‑lobe),73,180,green,HXK4
+Hinge 2,181,200,orange,HXK4
+Large domain (C‑lobe),201,300,green,HXK4
+C‑terminal tail,301,465,grey,HXK4
+Small domain,1,64,blue,HXK4
+Hinge 1,65,72,orange,HXK4
+Large domain (N‑lobe),73,180,green,HXK4
+Hinge 2,181,200,orange,HXK4
+Large domain (C‑lobe),201,300,green,HXK4
+C‑terminal tail,301,465,grey,HXK4
+Phosphatase domain,1,185,green,PTEN
+Linker,186,194,grey,PTEN
+C2 domain,195,351,blue,PTEN
+C-terminal tail,352,403,grey,PTEN
+Phosphatase domain,1,185,green,PTEN
+Linker,186,194,grey,PTEN
+C2 domain,195,351,blue,PTEN
+C-terminal tail,352,403,grey,PTEN
+Phosphatase domain,1,185,green,PTEN
+Linker,186,194,grey,PTEN
+C2 domain,195,351,blue,PTEN
+C-terminal tail,352,403,grey,PTEN
+SH3,84,140,lightblue,SRC
+SH2,150,248,lightgreen,SRC
+Kinase,270,536,lightpink,SRC
+SH3,84,140,lightblue,SRC
+SH2,150,248,lightgreen,SRC
+Kinase,270,536,lightpink,SRC
+SH3,84,140,lightblue,SRC
+SH2,150,248,lightgreen,SRC
+Kinase,270,536,lightpink,SRC
