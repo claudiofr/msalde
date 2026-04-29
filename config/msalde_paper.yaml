@@ -1,0 +1,225 @@
+# config file for minerva, i.e. directories are different
+db:
+  url: "sqlite:///./../../data/al/db/msalde.db"
+sub_runs:
+  config_file: "./config/simulations.yaml"
+general:
+  store_acquired_variants: true
+external_repo:
+  clinvar_dir: ~/gitrepo/msalde/data/clinvar
+variant_ref:
+  db:
+    url: "sqlite:///./db/variant_ref.db"
+  datasets:
+    mc4r:
+      input_path: "/home/claudiof/win_wsl_home/data/al/dms/mc4r-dms.tsv"
+      wt_path: "/home/claudiof/win_wsl_home/data/al/dms/mc4r-wt.tsv"
+embedding_extractor:
+  type: esm
+  model_name: facebook/esm2_t33_650M_UR50D
+  output_dir: /sc/arion/work/fratac01/data/al/esm/fv_64_64
+  parameters:
+    cache_dir: "./model_cache"
+    device: "cuda"
+    batch_size: 8
+    quantize: false
+    compression:
+      method: mean_pooling # options: [none, mean_pooling, max_pooling, window_pooling]
+    compression1:
+      method: window_pooling # options: [none, mean_pooling, max_pooling, window_pooling]
+      num_segments: 8
+      overlap_fraction: 0.5
+      pool_method: mean  # options: [mean, max]
+    compression2:
+      method: fisher_vector
+      normalize: true
+      num_gaussian_mixture_components: 64
+      pca_dim: 64
+      random_state: 42
+pdb_repository:
+  datasets:
+    SRC:
+      pdb_path: "./data/pdb/2src.cif"
+      domains:
+        - name: "SH3"
+          start: 84
+          end: 140
+          color: "lightblue"
+        - name: "SH2"
+          start: 150
+          end: 248
+          color: "lightgreen"
+        - name: "Kinase"
+          start: 270
+          end: 536
+          color: "lightpink"
+    PTEN:
+      pdb_path: "./data/pdb/1d5r.cif"
+      domains:
+        - name: "Phosphatase domain"
+          start: 1
+          end: 185
+          color: "green"
+        - name: "Linker"
+          start: 186
+          end: 194
+          color: "grey"
+        - name: "C2 domain"
+          start: 195
+          end: 351
+          color: "blue"
+        - name: "C-terminal tail"
+          start: 352
+          end: 403
+          color: "grey"
+    HXK4:
+      pdb_path: "./data/pdb/1v4s.cif"
+      domains:
+        - name: "Small domain"
+          start: 1
+          end: 64
+          color: "blue"
+        - name: "Hinge 1"
+          start: 65
+          end: 72
+          color: "orange"
+        - name: "Large domain (N‑lobe)"
+          start: 73
+          end: 180
+          color: "green"
+        - name: "Hinge 2"
+          start: 181
+          end: 200
+          color: "orange"
+        - name: "Large domain (C‑lobe)"
+          start: 201
+          end: 300
+          color: "green"
+        - name: "C‑terminal tail"
+          start: 301
+          end: 465
+          color: "grey"
+    MC4R:
+      pdb_path: "./data/pdb/7aue.cif"
+      domains:
+        - name: "ECD"
+          start: 1
+          end: 35
+          color: "grey"
+        - name: "TM1"
+          start: 36
+          end: 65
+          color: "green"
+        - name: "ICL1"
+          start: 66
+          end: 71
+          color: "orange"
+        - name: "TM2"
+          start: 72
+          end: 102
+          color: "green"
+        - name: "ICL2"
+          start: 103
+          end: 109
+          color: "orange"
+        - name: "TM3"
+          start: 110
+          end: 140
+          color: "green"
+        - name: "ECL2"
+          start: 141
+          end: 149
+          color: "blue"
+        - name: "TM4"
+          start: 150
+          end: 175
+          color: "green"
+        - name: "ICL3"
+          start: 176
+          end: 199
+          color: "orange"
+        - name: "TM5"
+          start: 200
+          end: 230
+          color: "green"
+        - name: "ECL3"
+          start: 231
+          end: 239
+          color: "blue"
+        - name: "TM6"
+          start: 240
+          end: 270
+          color: "green"
+        - name: "ICL4"
+          start: 271
+          end: 279
+          color: "orange"
+        - name: "TM7"
+          start: 280
+          end: 305
+          color: "green"
+        - name: "C-tail"
+          start: 306
+          end: 332
+          color: "grey"
+datasets:
+  MC4R:
+    data_loader_type: file_loader
+    input_path: /sc/arion/work/fratac01/data/al/dms/MC4R_labels.csv
+    wild_type_id: "WT"
+    column_names:
+      id_col: "variant_id"
+      # sequence_col: "mutant"
+      score_col: "z_score"
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/fv_64_64/MC4R_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/MC4R.fasta
+  HXK4:
+    data_loader_type: file_loader
+    input_path: /sc/arion/work/fratac01/data/al/dms/HXK4_labels.csv
+    wild_type_id: "WT"
+    column_names:
+      id_col: "mutant"
+      # sequence_col: "mutant"
+      score_col: "DMS_score"
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/fv_64_64/HXK4_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/HXK4.fasta
+  PTEN:
+    data_loader_type: file_loader
+    input_path: /sc/arion/work/fratac01/data/al/dms/PTEN_labels.csv
+    wild_type_id: "WT"
+    column_names:
+      id_col: "mutant"
+      # sequence_col: "mutant"
+      score_col: "DMS_score"
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/fv_64_64/PTEN_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/PTEN.fasta
+  SRC:
+    data_loader_type: file_loader
+    input_path: /sc/arion/work/fratac01/data/al/dms/SRC_labels.csv
+    wild_type_id: "WT"
+    column_names:
+      id_col: "mutant"
+      # sequence_col: "mutant"
+      score_col: "DMS_score"
+    embeddings_file: /sc/arion/work/fratac01/data/al/esm/fv_64_64/SRC_esm2_t33_650M_UR50D.csv
+    fasta_file: /sc/arion/work/fratac01/data/al/dms/SRC.fasta
+c3_1:
+  default_dataset: cas12f
+  simulation_config_id: c3_1
+  embedder:
+    type: file_loader
+    model_name: esm2_t33_650M_UR50D
+c3_2:
+  default_dataset: cas12f
+  simulation_config_id: c3_2
+  embedder:
+    type: file_loader
+    model_name: esm2_t33_650M_UR50D
+c10:
+  default_dataset: cas12f
+  simulation_config_id: c10
+  log_likelihood_ratio_computer:
+    type: ESM2LLRComputer
+    parameters:
+      base_model_name: facebook/esm2_t33_650M_UR50D
+      batch_size: 8

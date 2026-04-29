@@ -14,6 +14,16 @@ from msalde.plotter import ALDEPlotter
 from msalde.query_repository import ALDEQueryRepository
 from msalde.variant_util import variant_id_to_position
 
+container = None
+
+
+def init(config_path="./config/msaldem.yaml"):
+    global container
+    container = ALDEContainer(config_path)
+
+
+init()
+
 DATASETS = [
     "ADRB2",
     "AICDA",
@@ -739,7 +749,6 @@ def show_protein_landscape_3d(
 
 
 def show_plots_old(show_plot_func, datasets, projection='rectilinear'):
-    container = ALDEContainer("./config/msaldem.yaml")
     # container = ALDEContainer("./config/msalde.yaml")
     repo = container.query_repository
     external_repo = container.external_repository
@@ -821,7 +830,6 @@ def show_protein_landscape_plots(show_plot_func, dataset_plot_info,
         "savefig.bbox":        "tight",
     })
 
-    container = ALDEContainer("./config/msaldem.yaml")
     # container = ALDEContainer("./config/msalde.yaml")
     repo = container.query_repository
     pdb_repo = container.pdb_repository
@@ -937,7 +945,6 @@ def show_roc_prediction_assay_plots(show_plot_func, datasets, assay_types,
                                     run_names,
                                     compute_class_label_funcs,
                                     output_data_file=None):
-    container = ALDEContainer("./config/msaldem.yaml")
     # container = ALDEContainer("./config/msalde.yaml")
     repo = container.query_repository
     var_repo = container.variant_repository
@@ -1030,7 +1037,6 @@ def show_mean_activity_by_round_comparison_plots(datasets,
                                         config_ids, run_names,
                                         labels=None):
 
-    container = ALDEContainer("./config/msaldem.yaml")
     repo = container.query_repository
     plotter = container.plotter
 
@@ -1087,7 +1093,6 @@ def show_auc_by_round_plots(show_plot_func, dataset_plot_info,
                                     llr_run_name,
                                     output_data_file=None):
 
-    container = ALDEContainer("./config/msaldem.yaml")
     repo = container.query_repository
     plotter = container.plotter
     var_repo = container.variant_repository
@@ -1180,7 +1185,6 @@ def show_auc_by_round_plots(show_plot_func, dataset_plot_info,
 def show_metric_by_domain_plots_multi(show_plot_func, dataset_plot_info,
                                       output_data_file=None):
 
-    container = ALDEContainer("./config/msaldem.yaml")
     repo = container.query_repository
     plotter = container.plotter
     var_repo = container.variant_repository
@@ -1272,7 +1276,6 @@ def show_metric_by_domain_plots_multi(show_plot_func, dataset_plot_info,
 
 def show_metric_by_domain_plots(show_plot_func, dataset_plot_info):
 
-    container = ALDEContainer("./config/msaldem.yaml")
     repo = container.query_repository
     plotter = container.plotter
     var_repo = container.variant_repository

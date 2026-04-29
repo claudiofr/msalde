@@ -4,3 +4,4 @@ temp
 model_cache/
 esm2_model/
 /data/
+output/data/*.tiff
